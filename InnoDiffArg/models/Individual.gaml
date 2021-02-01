@@ -21,7 +21,6 @@ species Individual skills: [argumenting]{
 	list<Individual> relatives <- [];
 	Individual last_connexion;
 	int cpt_satisfied <- 0;
-	int cpt_interest <- 0;
 	
 
 	//*********TPB values***********
@@ -52,8 +51,7 @@ species Individual skills: [argumenting]{
 		float Hij <- min([i.intention+i.intention_uncertainty, subjective_norm+subjective_norm_uncertainty]) - max([i.intention+i.intention_uncertainty, subjective_norm+subjective_norm_uncertainty]);
 		subjective_norm <- subjective_norm + social_impact_param * (Hij/i.intention_uncertainty-1) * (i.intention-subjective_norm);
 		subjective_norm_uncertainty <- subjective_norm + social_impact_param * (Hij/i.intention_uncertainty-1) * (i.intention_uncertainty-subjective_norm_uncertainty);
-		
-		argument added_arg;
+
 		switch(i.decision_state){
 			match "information request"{ do addArg(one_of(i.known_arguments)); }
 			match "unsatisfied"{ do addArg(one_of(i.known_arguments where (each.conclusion = "-"))); } // transmit negative argument
@@ -106,9 +104,8 @@ species Individual skills: [argumenting]{
 			}
 			match "pre adoption" {
 				if (interest ="no" or interest ="maybe") {decision_state <- "no adoption";}
-				if (interest ="yes"){
-					cpt_interest <- cpt_interest+1;
-					decision_state <- cpt_interest = p ? "adoption" : "pre adoption";
+				if (interest ="yes" and intention >= adoption_threshold){
+					decision_state <- "adoption";
 				}
 			}
 			match "no adoption" {
