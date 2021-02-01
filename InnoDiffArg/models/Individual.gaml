@@ -55,7 +55,7 @@ species Individual skills: [argumenting]{
 		switch(i.decision_state){
 			match "information request"{ do addArg(one_of(i.known_arguments)); }
 			match "unsatisfied"{ do addArg(one_of(i.known_arguments where (each.conclusion = "-"))); } // transmit negative argument
-			match_one ["pre adoption", "adoption", "satified"]{
+			match_one ["pre adoption", "adoption", "satisfied"]{
 				//in those state the agent have a higher probability to transmit positive argument
 				if flip(0.8){
 					do addArg(one_of(i.known_arguments where (each.conclusion = "+")));

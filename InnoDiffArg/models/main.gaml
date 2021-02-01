@@ -105,5 +105,20 @@ experiment main type: gui {
 				datalist argument_distribution.keys value: argument_distribution.keys collect argument_distribution[each] color:#blue;
 			}
 		}
+		display informed_chart {
+			chart "% of not informed people according simulation cycles" type: xy series_label_position:none {
+				data "not informed people" value: (Individual count !each.informed)/length(Individual.population) color:#black marker: false thickness:2.0;
+			}
+		}
+		display interest_chart {
+			chart "% of interested people according simulation cycles" type: xy series_label_position:none {
+				data "interested people" value: (Individual count (each.interest="yes"))/(length(Individual.population)) color:#black marker: false thickness:2.0;
+			}
+		}
+		display adoption_chart {
+			chart "adoption (in % of pop.) according simulation cycles" type: xy series_label_position:none {
+				data "adoption" value: (Individual count (each.decision_state="adoption" or each.decision_state="satisfied" or each.decision_state="unsatisfied"))/length(Individual.population) color:#black marker: false thickness:2.0;
+			}
+		}
 	}
 }
