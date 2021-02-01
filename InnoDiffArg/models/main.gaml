@@ -24,6 +24,8 @@ global {
 	float social_impact_param <- 0.1;
 	int nb_relevents_args <- 2;
 	int nb_max_known_arguments <- 7;
+	int p <- 10;
+	int q <- 15;
 	
 	float adoption_threshold <- 0.56;
 	float avg_network_degree <- 4.60;

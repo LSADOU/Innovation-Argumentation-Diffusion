@@ -20,6 +20,9 @@ species Individual skills: [argumenting]{
 	map<string,float> source_confidence <- [];
 	list<Individual> relatives <- [];
 	Individual last_connexion;
+	int cpt_satisfied <- 0;
+	int cpt_interest <- 0;
+	
 
 	//*********TPB values***********
 	
@@ -103,14 +106,21 @@ species Individual skills: [argumenting]{
 			}
 			match "pre adoption" {
 				if (interest ="no" or interest ="maybe") {decision_state <- "no adoption";}
-				if (interest ="yes") {decision_state <- "adoption";}
+				if (interest ="yes"){
+					cpt_interest <- cpt_interest+1;
+					decision_state <- cpt_interest = p ? "adoption" : "pre adoption";
+				}
 			}
 			match "no adoption" {
 				if (interest ="yes") {decision_state <- "pre adoption";}
 			}
 			match "adoption" {
-				if (satisfied) {decision_state <- "satisfied";}
-				if (!satisfied) {decision_state <- "unsatisfied";}
+				cpt_satisfied <- cpt_satisfied +1;
+				//we consider that agent have more probability to be satisfied by innovation if it matches their attitude
+				//attitude is in range [-1;1] we change it to a uniform distribution range [0;1] for being satisfied
+				satisfied <- flip (attitude/2+0.50);
+				if (satisfied and cpt_satisfied=q) {decision_state <- "satisfied";}
+				if (!satisfied and cpt_satisfied=q) {decision_state <- "unsatisfied";}
 			}
 			match "satisfied" {}
 			match "unsatisfied" {}
@@ -128,7 +138,7 @@ species Individual skills: [argumenting]{
 	}
 	
 	action addArg(argument arg){
-		if arg != nil {
+		if arg != nil and !(known_arguments contains arg){
 			known_arguments << arg;
 			if (length(known_arguments) >= nb_max_known_arguments){
 				remove index:0 from:known_arguments;
