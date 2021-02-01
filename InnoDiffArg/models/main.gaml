@@ -56,12 +56,27 @@ global {
 
 experiment main type: gui {
 	float minimum_cycle_duration <- 0.1;
-	map<string,int>decision_state_distribution;
+	
+	map<string,int>argument_distribution <- [];
+	map<string,int>decision_state_distribution <- [];
+	list<string> possible_states <- ["information request", "not concerned", "no adoption", "pre adoption", "adoption", "satisfied", "unsatisfied"];
+	
 	
 	reflex update_decision_state_distribution{
-		decision_state_distribution <- [];
+		loop state over:possible_states{
+			decision_state_distribution[state] <- 0;
+		}
 		loop indiv over: Individual.population{
-			decision_state_distribution[indiv.decision_state] <- decision_state_distribution.keys contains indiv.decision_state ? decision_state_distribution[indiv.decision_state]+1 : 1;
+			decision_state_distribution[indiv.decision_state] <- decision_state_distribution[indiv.decision_state] + 1;
+		}
+	}
+	
+	reflex update_arguments_distribution{
+		loop argu over:A{
+			argument_distribution[argu.id] <- 0;
+		}
+		loop argu over: Individual.population accumulate each.known_arguments{
+			argument_distribution[argu.id] <- argument_distribution[argu.id] + 1;
 		}
 	}
 	
@@ -81,8 +96,13 @@ experiment main type: gui {
 			}*/
 		}
 		display state_chart {
-			chart "decision state distribution according simulation cycles" type: histogram{
+			chart "decision states histogram" type: histogram{
 				datalist decision_state_distribution.keys value: decision_state_distribution.keys collect decision_state_distribution[each] color:#blue;
+			}
+		}
+		display arguments_chart {
+			chart "arguments histogram" type: histogram{
+				datalist argument_distribution.keys value: argument_distribution.keys collect argument_distribution[each] color:#blue;
 			}
 		}
 	}
