@@ -53,13 +53,12 @@ global {
 		
 		loop arg1 over: A{
 			loop arg2 over: A{
-				if (arg1.conclusion != arg2.conclusion) and (arg1.criteria.keys[0] = arg2.criteria.keys[0]){
+				if (arg1 != arg2) and  (arg1.conclusion != arg2.conclusion) and (arg1.criteria.keys[0] = arg2.criteria.keys[0]){
 					/*write arg1.id + " : " + arg1.conclusion + " : " + arg1.criteria.keys[0];
 					write arg2.id + " : " + arg2.conclusion + " : " + arg2.criteria.keys[0];
 					write "***************";*/
 					r[arg1] << arg2;
-					r[arg2] << arg1;
-					nb_attack <- nb_attack +2;
+					nb_attack <- nb_attack + 1;
 				}
 			}
 		}

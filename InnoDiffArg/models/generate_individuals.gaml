@@ -74,11 +74,11 @@ global{
 			
 			attitude <- myself.getAttitude(cluster);
 			attitude_weight <- weight_attitude_nonadopters;
-			attitude_uncertainty <- myself.getAttitudeUncertainty(cluster);
+			attitude_uncertainty <- myself.getAttitudeUncertainty(cluster)/2;
 	
 			subjective_norm <- myself.getSubjectiveNorm(cluster);
 			subjective_norm_weight <- weight_subnorm_nonadopters;
-			subjective_norm_uncertainty <- myself.getSubjectiveNormUncertainty(cluster);
+			subjective_norm_uncertainty <- myself.getSubjectiveNormUncertainty(cluster)/2;
 	
 			perceived_behavioural_control <- myself.getPBC(cluster);
 			perceived_behavioural_control_weight <- weight_PBC_nonadopters;
@@ -90,6 +90,7 @@ global{
 			do updateDecisionState;
 			
 			location <- indiv_locations[cpt];
+			id <- cpt;
 			cpt <- cpt+1;
 		}
 	}

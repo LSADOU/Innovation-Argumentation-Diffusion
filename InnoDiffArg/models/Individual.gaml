@@ -11,6 +11,8 @@ import "main.gaml"
 
 species Individual skills: [argumenting]{
 	
+	int id <- 0;
+	
 	list<argument> known_arguments <- [];
 	string decision_state <- "information request" among: ["information request", "not concerned", "no adoption", "pre adoption", "adoption", "satisfied", "unsatisfied"];
 	string interest <- "maybe" among: ["no", "maybe", "yes"];
@@ -33,10 +35,10 @@ species Individual skills: [argumenting]{
 	float subjective_norm_weight <- 0.0;
 	float subjective_norm_uncertainty <- 0.01 min: 0.01 max: 2.0;
 	
-	float perceived_behavioural_control <- rnd(-1.0,1.0) min: -1.0 max: 1.0;
+	float perceived_behavioural_control <- 0.0 min: -1.0 max: 1.0;
 	float perceived_behavioural_control_weight <- 0.0;
 	
-	float intention <- 0.0;
+	float intention <- 0.0 min: -1.0 max: 1.0;
 	float intention_uncertainty <- 0.0;
 	
 	//*******************************
@@ -77,7 +79,7 @@ species Individual skills: [argumenting]{
 	}
 	
 	action updateAttitude {
-		attitude <- getAttitudeFromArgs;
+		attitude <- getAttitudeFromArgs();
 	}
 	
 	action updateIntentionValues{
@@ -175,6 +177,15 @@ species Individual skills: [argumenting]{
 		if (last_connexion != nil){
 			draw line([location,last_connexion.location]) end_arrow: 1 color: #black;
 		}
+	}
+	
+	aspect intention_overview{
+		point center <- {intention,id,0.0};
+		point right <- {intention+intention_uncertainty,id,0.0};
+		point left <- {intention-intention_uncertainty,id,0.0};
+		draw circle(0.1) at:center color: #black;
+		draw line([center,right]) color: #black;
+		draw line([center,left]) color: #black;
 	}
 	
 }

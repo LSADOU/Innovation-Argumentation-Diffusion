@@ -12,7 +12,6 @@ import "generate_individuals.gaml"
 import "generate_social_network.gaml"
 
 global {
-	
 
 	string csv_directory <- "../includes/";
 	bool arg_csv_has_header <- true;
@@ -46,11 +45,27 @@ global {
 	
 	init{
 		write "***** start initialisation *****";
+		create Boundaries;
 		do readArg;
 		do computeAttacks;
 		do generatePopulation;
 		do generateSocialNetwork(Individual.population,4,0.2);
 		write "***** end initialisation *****";
+	}
+}
+
+species Boundaries{
+	aspect intention_overview{
+		point center_low <- {0.0,0.0,0.0};
+		point left_low <- {-1.0,0.0,0.0};
+		point right_low <- {1.0,0.0,0.0};
+		point center_high <- {0.0,60.0,0.0};
+		point left_high <- {-1.0,60.0,0.0};
+		point right_high <- {1.0,60.0,0.0};
+		
+		draw line([center_low,center_high]) color: #gray;
+		draw line([left_low,left_high]) color: #gray;
+		draw line([right_low,right_high]) color: #gray;
 	}
 }
 
@@ -81,9 +96,15 @@ experiment main type: gui {
 	}
 	
 	output {
+		
 		display VisualNetwork type: opengl draw_env:false{
 	    	species Individual aspect: basic;
 		}
+		display VisualIntention type: opengl draw_env:false{
+			species Boundaries aspect: intention_overview;
+	    	species Individual aspect: intention_overview;
+		}
+		
 		display intention_chart {
 			chart "intention distribution according simulation cycles" type: xy series_label_position:none y_range:{-1,1}{
 				datalist Individual collect each.name value: Individual collect each.intention color:#black marker: false thickness:2.0;
