@@ -77,7 +77,7 @@ species Individual skills: [argumenting]{
 	}
 	
 	action updateAttitude {
-		attitude <- sum(known_arguments collect argStrength(each));
+		attitude <- getAttitudeFromArgs;
 	}
 	
 	action updateIntentionValues{
@@ -141,6 +141,31 @@ species Individual skills: [argumenting]{
 				remove index:0 from:known_arguments;
 			}	
 		}
+	}
+	
+	float getAttitudeFromArgs{
+		list<list<argument>> preferedExtensions <- [];
+		list<argument> attacked_by_offense <- [];
+		argumentation_graph <- directed(graph(known_arguments));
+		
+		loop offense over: known_arguments{
+			attacked_by_offense <- r[offense] where (known_arguments contains each);
+			loop victim over: attacked_by_offense{
+				if argStrength(offense) > argStrength(victim){
+					argumentation_graph <- argumentation_graph add_edge(offense::victim);
+				}
+			}
+		}
+		
+		preferedExtensions <- preferred_extensions();
+		float max_value <- -2.0;
+		float current_value;
+		loop pe over: preferedExtensions{
+			current_value <- sum(pe collect argStrength(each));
+			max_value <-  current_value > max_value ? current_value : max_value ;
+		}
+		
+		return max_value;
 	}
 	
 	aspect basic{

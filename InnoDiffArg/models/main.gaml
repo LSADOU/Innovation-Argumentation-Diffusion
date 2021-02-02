@@ -49,7 +49,7 @@ global {
 		do readArg;
 		do computeAttacks;
 		do generatePopulation;
-		do generateSocialNetwork(Individual.population,2,0.3);
+		do generateSocialNetwork(Individual.population,4,0.2);
 		write "***** end initialisation *****";
 	}
 }
@@ -81,7 +81,7 @@ experiment main type: gui {
 	}
 	
 	output {
-		display MyDisplay type: opengl draw_env:false{
+		display VisualNetwork type: opengl draw_env:false{
 	    	species Individual aspect: basic;
 		}
 		display intention_chart {
@@ -101,7 +101,7 @@ experiment main type: gui {
 			}
 		}
 		display arguments_chart {
-			chart "arguments histogram" type: histogram{
+			chart "occurence number of arguments histogram" type: histogram{
 				datalist argument_distribution.keys value: argument_distribution.keys collect argument_distribution[each] color:#blue;
 			}
 		}
