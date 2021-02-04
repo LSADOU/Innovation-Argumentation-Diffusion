@@ -69,6 +69,9 @@ global{
 			loop criterion over: arguments_criteria{
 				criteria_importance[criterion] <- rnd(0.0, 1.0);
 			}
+			loop source over: source_types{
+				source_confidence[source] <- rnd(0.0, 1.0);
+			}
 			
 			int cluster <- rnd(1,nb_clusters);
 			

@@ -18,6 +18,7 @@ global {
 	string arg_csv_namefile <- "MyChoice_argument.csv";
 	bool TPB_csv_has_header <- true;
 	string TPB_csv_namefile <- "values_TPB.csv";
+	int scale <- 10;
 	
 	int population_size <- 60;
 	float social_impact_param <- 0.1;
@@ -56,13 +57,17 @@ global {
 
 species Boundaries{
 	aspect intention_overview{
-		point center_low <- {0.0,0.0,0.0};
-		point left_low <- {-1.0,0.0,0.0};
-		point right_low <- {1.0,0.0,0.0};
-		point center_high <- {0.0,60.0,0.0};
-		point left_high <- {-1.0,60.0,0.0};
-		point right_high <- {1.0,60.0,0.0};
 		
+		point center_low <- {0.0,0.0,0.0};
+		point left_low <- {-1.0*scale,0.0,0.0};
+		point right_low <- {1.0*scale,0.0,0.0};
+		point center_high <- {0.0,population_size*scale,0.0};
+		point left_high <- {-1.0*scale,population_size*scale,0.0};
+		point right_high <- {1.0*scale,population_size*scale,0.0};
+		
+		draw "-1" color: #black size: 3*scale at: {left_low.x, left_low.y-1*scale} font: font("Helvetica", 3*scale , #plain);
+		draw "1" color: #black size: 3*scale at: {right_low.x, right_low.y-1*scale} font: font("Helvetica", 3*scale , #plain);
+		draw "0" color: #black size: 3*scale at: {center_low.x, center_low.y-1*scale} font: font("Helvetica", 3*scale , #plain);
 		draw line([center_low,center_high]) color: #gray;
 		draw line([left_low,left_high]) color: #gray;
 		draw line([right_low,right_high]) color: #gray;

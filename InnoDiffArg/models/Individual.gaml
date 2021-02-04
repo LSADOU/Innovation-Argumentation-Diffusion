@@ -133,6 +133,7 @@ species Individual skills: [argumenting]{
 		loop crit over: arg.criteria.keys{
 			strength <- strength + criteria_importance[string(crit)] * float(arg.criteria[string(crit)]);
 		}
+		strength <- strength * source_confidence[arg.source_type];
 		return strength;
 	}
 	
@@ -180,10 +181,10 @@ species Individual skills: [argumenting]{
 	}
 	
 	aspect intention_overview{
-		point center <- {intention,id,0.0};
-		point right <- {intention+intention_uncertainty,id,0.0};
-		point left <- {intention-intention_uncertainty,id,0.0};
-		draw circle(0.1) at:center color: #black;
+		point center <- {intention*scale,id*2,0.0};
+		point right <- {(intention+intention_uncertainty)*scale,id*2,0.0};
+		point left <- {(intention-intention_uncertainty)*scale,id*2,0.0};
+		draw circle(0.1*scale) at:center color: #black;
 		draw line([center,right]) color: #black;
 		draw line([center,left]) color: #black;
 	}
