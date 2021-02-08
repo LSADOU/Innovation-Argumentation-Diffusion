@@ -67,7 +67,6 @@ global{
 				known_arguments << a;
 				 do add_argument(a,global_argumentation_graph);
 			}
-			write argumentation_graph;
 			loop criterion over: arguments_criteria{
 				crit_importance[criterion] <- rnd(0.0, 1.0);
 			}

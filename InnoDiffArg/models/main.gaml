@@ -142,19 +142,23 @@ species Boundaries{
 	}
 }
 
-experiment test_fake_news repeat: 100 type: batch until: cycle = 1000 {
+experiment test_fake_news repeat: 100 type: batch until: cycle = 500 {
 	parameter nb_fake_news var: nb_fake_news among: [100,50,10,5,0];
+		parameter save_result_in_csv var: save_result_in_csv <- true;
+		parameter type_explo var: type_explo <- "normal";
 	
 	reflex end_sim {
 		write "num fake news: " + nb_fake_news + " mean intention: " + simulations mean_of each.mean_intention + " mean polarization: " + simulations mean_of each.pol + " mean_adoptions: " + simulations mean_of each.rate_adoption;
 	}
 }
 
-experiment test_stochasticity repeat: 500 type: batch until: cycle = 1000 {
+experiment test_stochasticity repeat: 500 type: batch until: cycle = 500 {
+	parameter save_result_in_csv var: save_result_in_csv <- true;
+	parameter type_explo var: type_explo <- "stochasticity";
 	
 }
 experiment main type: gui {
-	float minimum_cycle_duration <- 0.1;
+//	float minimum_cycle_duration <- 0.1;
 	
 	map<string,int>argument_distribution <- [];
 	map<string,int>decision_state_distribution <- [];

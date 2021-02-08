@@ -16,7 +16,7 @@ global {
 	action readArg {
 		
 		list<argument> loaded_arguments <- load_myChoice_arguments(arg_csv);
-		write ""+ length(loaded_arguments)+" argument(s) imported";
+		//write ""+ length(loaded_arguments)+" argument(s) imported";
 		global_argumentation_graph<- graph([]);
 		loop a over: loaded_arguments {
 			add  node(a) to: global_argumentation_graph;
@@ -24,10 +24,10 @@ global {
 		source_types <- remove_duplicates(A collect each.source_type);
 		arguments_criteria <- remove_duplicates(A accumulate each.criteria.keys);
 	
-		write "Sources are ";
+		/*write "Sources are ";
 		write source_types;
 		write "criterias are ";
-		write arguments_criteria;
+		write arguments_criteria;*/
 		
 	}
 	
@@ -44,7 +44,7 @@ global {
 			}
 		}
 
-		write ""+nb_attack+" attack(s) computed";
+		//write ""+nb_attack+" attack(s) computed";
 		
 	}
 	
