@@ -50,7 +50,6 @@ species Individual skills: [argumenting]{
 	
 	action update_with_new_argument(Individual source, argument argt) {
 		if (argt != nil) {
-			argument r_arg <- first(known_arguments);
 			source.known_arguments >> argt;
 			source.known_arguments << argt;
 			
@@ -59,7 +58,13 @@ species Individual skills: [argumenting]{
 				known_arguments << argt;
 			} else {
 				known_arguments << argt;
-				bool added <- add_argument(argt, global_argumentation_graph);
+				do add_argument(argt, global_argumentation_graph);
+				if (length(known_arguments) > nb_max_known_arguments) {
+					argument r_arg <- first(known_arguments);
+					do remove_argument(r_arg);
+					known_arguments >>r_arg;
+				}
+			
 			}	
 		}
 	}

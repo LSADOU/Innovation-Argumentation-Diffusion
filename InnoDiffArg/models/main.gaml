@@ -61,14 +61,12 @@ global {
 		do readArg;
 		do computeAttacks;
 		
-		if (nb_fake_news > 0) {
-			
-		}
 		list<string> arg_types <- remove_duplicates(A accumulate list<string>(each.criteria.keys));
 		if (nb_fake_news > 0) {
 			loop i from: 1 to: nb_fake_news {
 				string type_argument <- one_of(arg_types);
 				argument a <- argument(["id":: "fake_new_ " + i ,"option"::"", "conclusion"::"-", "criteria"::[type_argument::1.0], "source_type"::"Autre site Web"]);
+				add node(a) to: global_argumentation_graph;
 				list<argument> args <-  (A where ((each.conclusion = "+") and (type_argument in each.criteria.keys))) ;
 				if not empty(args) {
 					list<argument> args_attacks <- nb_attacks among args;
@@ -77,12 +75,11 @@ global {
 							bool is_added <- add_attack(a,ag,global_argumentation_graph);
 							is_added <-add_attack(ag,a,global_argumentation_graph);
 						} 
-						
-						
-					}
+					}	
 				}
 			}
-		}		
+		}
+		
 		do generatePopulation;
 		do generateSocialNetwork(Individual.population,4,0.2);
 	}

@@ -21,10 +21,11 @@ global {
 		loop a over: loaded_arguments {
 			add  node(a) to: global_argumentation_graph;
 		}
+				
 		source_types <- remove_duplicates(A collect each.source_type);
 		arguments_criteria <- remove_duplicates(A accumulate each.criteria.keys);
 	
-		/*write "Sources are ";
+	/*  write "Sources are ";
 		write source_types;
 		write "criterias are ";
 		write arguments_criteria;*/
