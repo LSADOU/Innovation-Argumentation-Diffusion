@@ -13,6 +13,7 @@ import "generate_social_network.gaml"
 
 global {
 
+
 	string csv_directory <- "../includes/";
 	bool arg_csv_has_header <- true;
 	string arg_csv_namefile <- "MyChoice_argument.csv";
@@ -22,7 +23,7 @@ global {
 	
 	int population_size <- 60;
 	float social_impact_param <- 0.1;
-	int nb_relevents_args <- 2;
+	int nb_relevents_args <- 4;
 	int nb_max_known_arguments <- 7;
 	int p <- 10;
 	int q <- 15;
@@ -38,21 +39,88 @@ global {
 	float weight_subnorm_adopters <- 0.158;
 	float weight_PBC_adopters <- 0.521;  
 
-	list<argument> A <- [];
-	map<argument,list<argument>> r <- [];
+	graph<argument,unknown> global_argumentation_graph;
 	
 	list source_types <- [];
 	list arguments_criteria <- [];
 	
+	string type_explo <- "normal";//"stochasticity";
+	int nb_attacks <- 1;
+		
+	int nb_fake_news <- 0;
+	float mean_intention;
+	float rate_adoption;
+	float pol ;
+	bool save_result_in_csv <- false;
+	
+	list<argument> A -> {global_argumentation_graph.vertices};
+	
 	init{
-		write "***** start initialisation *****";
+		//write "***** start initialisation *****";
 		create Boundaries;
 		do readArg;
 		do computeAttacks;
+		
+		if (nb_fake_news > 0) {
+			
+		}
+		list<string> arg_types <- remove_duplicates(A accumulate list<string>(each.criteria.keys));
+		if (nb_fake_news > 0) {
+			loop i from: 1 to: nb_fake_news {
+				string type_argument <- one_of(arg_types);
+				argument a <- argument(["id":: "fake_new_ " + i ,"option"::"", "conclusion"::"-", "criteria"::[type_argument::1.0], "source_type"::"Autre site Web"]);
+				list<argument> args <-  (A where ((each.conclusion = "+") and (type_argument in each.criteria.keys))) ;
+				if not empty(args) {
+					list<argument> args_attacks <- nb_attacks among args;
+					loop ag over: args_attacks {
+						if (ag != nil) {
+							bool is_added <- add_attack(a,ag,global_argumentation_graph);
+							is_added <-add_attack(ag,a,global_argumentation_graph);
+						} 
+						
+						
+					}
+				}
+			}
+		}		
 		do generatePopulation;
 		do generateSocialNetwork(Individual.population,4,0.2);
-		write "***** end initialisation *****";
 	}
+	
+	reflex save_result when: every(50 #cycle) and save_result_in_csv{
+		
+		 pol <- polarization();
+		 mean_intention <- Individual mean_of (each.intention);
+		 rate_adoption <- (Individual count (each.decision_state="adoption" or each.decision_state="satisfied" or each.decision_state="unsatisfied"))/length(Individual.population);
+		
+			
+		string 	results <- ""+ int(self)+"," + seed+","+nb_fake_news+","+ cycle + ","+	pol+"," +mean_intention+","+rate_adoption;
+		
+		
+		save results to: type_explo + "/results_" + type_explo+ "_"+nb_fake_news+".csv" type:text rewrite: false;
+	}
+	
+	float polarization{
+		list<float> dists;
+		int N <- length(Individual) - 1;
+		loop i from: 0 to: N {
+			Individual pi <- Individual(i);
+			loop j from: 0 to: N {
+				if (i != j) {
+					Individual pj <- Individual(j);
+					dists << abs(pi.intention - pj.intention);
+				}
+			}	
+		}
+		float mean_val <- mean(dists);
+		float polarization;
+		loop v over: dists {
+			polarization <- polarization + ((v - mean_val) ^ 2);
+		}
+		polarization <- polarization / (1 * (N + 1) * N);
+		return polarization;
+	}
+	
 }
 
 species Boundaries{
@@ -74,6 +142,17 @@ species Boundaries{
 	}
 }
 
+experiment test_fake_news repeat: 100 type: batch until: cycle = 1000 {
+	parameter nb_fake_news var: nb_fake_news among: [100,50,10,5,0];
+	
+	reflex end_sim {
+		write "num fake news: " + nb_fake_news + " mean intention: " + simulations mean_of each.mean_intention + " mean polarization: " + simulations mean_of each.pol + " mean_adoptions: " + simulations mean_of each.rate_adoption;
+	}
+}
+
+experiment test_stochasticity repeat: 500 type: batch until: cycle = 1000 {
+	
+}
 experiment main type: gui {
 	float minimum_cycle_duration <- 0.1;
 	
@@ -92,7 +171,7 @@ experiment main type: gui {
 	}
 	
 	reflex update_arguments_distribution{
-		loop argu over:A{
+		loop argu over:A {
 			argument_distribution[argu.id] <- 0;
 		}
 		loop argu over: Individual.population accumulate each.known_arguments{

@@ -41,7 +41,7 @@ global{
 			}
 		}
 		nb_clusters <- length(TPBmap.keys);
-		write ""+ nb_clusters +" individual clusters data loaded";
+		//write ""+ nb_clusters +" individual clusters data loaded";
 	}
 	
 	action generatePopulation {
@@ -61,19 +61,20 @@ global{
 		
 		create Individual number: population_size{
 			
-			loop times:rnd(0,nb_max_known_arguments){
-				known_arguments << one_of(A);
+			argumentation_graph <- graph([]);
+			list<argument> args <- rnd(1,nb_max_known_arguments) among A;
+			loop a over: args {
+				known_arguments << a;
+				 do add_argument(a,global_argumentation_graph);
 			}
-			known_arguments <- remove_duplicates(known_arguments);
-			
+			write argumentation_graph;
 			loop criterion over: arguments_criteria{
-				criteria_importance[criterion] <- rnd(0.0, 1.0);
+				crit_importance[criterion] <- rnd(0.0, 1.0);
 			}
 			loop source over: source_types{
-				source_confidence[source] <- rnd(0.0, 1.0);
+				source_type_confidence[source] <- rnd(1.0);
 			}
-			
-			int cluster <- rnd(1,nb_clusters);
+		 	int cluster <- rnd(1,nb_clusters);
 			
 			attitude <- myself.getAttitude(cluster);
 			attitude_weight <- weight_attitude_nonadopters;
