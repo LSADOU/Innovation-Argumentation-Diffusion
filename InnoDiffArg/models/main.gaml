@@ -47,7 +47,7 @@ global {
 	string type_explo <- "normal";//"stochasticity";
 	int nb_attacks <- 1;
 		
-	int nb_fake_news <- 0;
+	int nb_fake_news <- 50;
 	float mean_intention;
 	float rate_adoption;
 	float pol ;
@@ -72,8 +72,8 @@ global {
 					list<argument> args_attacks <- nb_attacks among args;
 					loop ag over: args_attacks {
 						if (ag != nil) {
-							bool is_added <- add_attack(a,ag,global_argumentation_graph);
-							is_added <-add_attack(ag,a,global_argumentation_graph);
+							add edge(a::ag) to:global_argumentation_graph;
+							add edge(ag::a) to:global_argumentation_graph;
 						} 
 					}	
 				}
@@ -139,7 +139,7 @@ species Boundaries{
 	}
 }
 
-experiment test_fake_news repeat: 100 type: batch until: cycle = 500 {
+experiment test_fake_news repeat: 100 type: batch until: cycle = 3000 {
 	parameter nb_fake_news var: nb_fake_news among: [100,50,10,5,0];
 		parameter save_result_in_csv var: save_result_in_csv <- true;
 		parameter type_explo var: type_explo <- "normal";
@@ -149,7 +149,7 @@ experiment test_fake_news repeat: 100 type: batch until: cycle = 500 {
 	}
 }
 
-experiment test_stochasticity repeat: 500 type: batch until: cycle = 500 {
+experiment test_stochasticity repeat: 500 type: batch until: cycle = 3000 {
 	parameter save_result_in_csv var: save_result_in_csv <- true;
 	parameter type_explo var: type_explo <- "stochasticity";
 	

@@ -17,7 +17,7 @@ global {
 		
 		list<argument> loaded_arguments <- load_myChoice_arguments(arg_csv);
 		//write ""+ length(loaded_arguments)+" argument(s) imported";
-		global_argumentation_graph<- graph([]);
+		global_argumentation_graph<- directed(graph([]));
 		loop a over: loaded_arguments {
 			add  node(a) to: global_argumentation_graph;
 		}
@@ -39,7 +39,7 @@ global {
 		loop arg1 over: A{
 			loop arg2 over: A{
 				if (arg1 != arg2) and  (arg1.conclusion != arg2.conclusion) and (arg1.criteria.keys[0] = arg2.criteria.keys[0]){
-					bool is_added <- add_attack(arg1,arg2, global_argumentation_graph);
+					add edge(arg1::arg2) to: global_argumentation_graph;
 					nb_attack <- nb_attack + 1;
 				}
 			}

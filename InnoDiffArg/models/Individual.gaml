@@ -29,11 +29,11 @@ species Individual skills: [argumenting]{
 	
 	float attitude <- 0.0 min: -1.0 max: 1.0;
 	float attitude_weight <- 0.0;
-	float attitude_uncertainty <- 0.01 min: 0.01 max: 2.0;
+	float attitude_uncertainty <- 0.0 min: 0.0 max: 1.0;
 	
 	float subjective_norm <- 0.0 min: -1.0 max: 1.0;
 	float subjective_norm_weight <- 0.0;
-	float subjective_norm_uncertainty <- 0.01 min: 0.01 max: 2.0;
+	float subjective_norm_uncertainty <- 0.0 min: 0.0 max: 1.0;
 	
 	float perceived_behavioural_control <- 0.0 min: -1.0 max: 1.0;
 	float perceived_behavioural_control_weight <- 0.0;
@@ -70,28 +70,34 @@ species Individual skills: [argumenting]{
 	}
 	action influenced_by(Individual i){
 		//Hij is the overlapping intention width between the current individual and i
-		float Hij <- min([i.intention+i.intention_uncertainty, subjective_norm+subjective_norm_uncertainty]) - max([i.intention+i.intention_uncertainty, subjective_norm+subjective_norm_uncertainty]);
-		subjective_norm <- subjective_norm + social_impact_param * (Hij/i.intention_uncertainty-1) * (i.intention-subjective_norm);
-		subjective_norm_uncertainty <- subjective_norm + social_impact_param * (Hij/i.intention_uncertainty-1) * (i.intention_uncertainty-subjective_norm_uncertainty);
-
-		switch(i.decision_state){
-			match "information request"{ do update_with_new_argument(i,one_of(i.known_arguments)); }
-			match "unsatisfied"{ do update_with_new_argument(i, one_of(i.known_arguments where (each.conclusion = "-"))); } // transmit negative argument
-			match_one ["pre adoption", "adoption", "satisfied"]{
-				//in those state the agent have a higher probability to transmit positive argument
-				if flip(0.8){
-					do update_with_new_argument(i,one_of(i.known_arguments where (each.conclusion = "+")));
-				}else{
-					do update_with_new_argument(i,one_of(i.known_arguments where (each.conclusion = "-")));
-				}
-			}
-		}
+				
+			subjective_norm <- subjective_norm + social_impact_param *  (1 - i.intention_uncertainty) * (i.intention-subjective_norm );
+			subjective_norm_uncertainty <- subjective_norm_uncertainty + social_impact_param * (i.intention_uncertainty-subjective_norm_uncertainty);
+			
+			float Hij <- min([i.intention+i.intention_uncertainty, intention+intention_uncertainty]) - max([i.intention-i.intention_uncertainty, intention-intention_uncertainty]);
 		
-		do updateInformed;
-		do updateAttitude;
-		do updateIntentionValues;
-		do updateInterest;
-		do updateDecisionState;
+			if (Hij > i.intention_uncertainty) {
+	
+				switch(i.decision_state){
+					match "information request"{ do update_with_new_argument(i,one_of(i.known_arguments)); }
+					match "unsatisfied"{ do update_with_new_argument(i, one_of(i.known_arguments where (each.conclusion = "-"))); } // transmit negative argument
+					match_one ["pre adoption", "adoption", "satisfied"]{
+						//in those state the agent have a higher probability to transmit positive argument
+						if flip(0.8){
+							do update_with_new_argument(i,one_of(i.known_arguments where (each.conclusion = "+")));
+						}else{
+							do update_with_new_argument(i,one_of(i.known_arguments where (each.conclusion = "-")));
+						}
+					}
+				}
+				
+				do updateInformed;
+				do updateAttitude;
+				do updateIntentionValues;
+				do updateInterest;
+				do updateDecisionState;
+			
+			}
 	}
 	
 	action updateInformed{
