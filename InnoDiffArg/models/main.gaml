@@ -11,7 +11,7 @@ import "import_arguments.gaml"
 import "generate_individuals.gaml"
 import "generate_social_network.gaml"
 
-global {
+global skills:[argumenting] {
 
 
 	string csv_directory <- "../includes/";
@@ -39,12 +39,12 @@ global {
 	float weight_subnorm_adopters <- 0.158;
 	float weight_PBC_adopters <- 0.521;  
 
-	graph<argument,unknown> global_argumentation_graph;
+	graph global_argumentation_graph;
 	
-	list source_types <- [];
-	list arguments_criteria <- [];
+	list<string> source_types <- [];
+	list<string> arguments_criteria <- [];
 	
-	string type_explo <- "normal";//"stochasticity";
+	string type_explo <- "normal" among: ["normal","stochasticity"];
 	int nb_attacks <- 1;
 		
 	int nb_fake_news <- 0;
@@ -53,7 +53,7 @@ global {
 	float pol ;
 	bool save_result_in_csv <- false;
 	
-	list<argument> A -> {global_argumentation_graph.vertices};
+	list<argument> A -> {list<argument>(global_argumentation_graph.vertices)};
 	
 	init{
 		//write "***** start initialisation *****";
@@ -64,16 +64,16 @@ global {
 		list<string> arg_types <- remove_duplicates(A accumulate list<string>(each.criteria.keys));
 		if (nb_fake_news > 0) {
 			loop i from: 1 to: nb_fake_news {
-				string type_argument <- one_of(arg_types);
-				argument a <- argument(["id":: "fake_new_ " + i ,"option"::"", "conclusion"::"-", "criteria"::[type_argument::1.0], "source_type"::"Autre site Web"]);
+				string type_argument <- one_of(arguments_criteria);
+				argument a <- argument(["id":: "fake_new_" + i ,"option"::"", "conclusion"::"-", "criteria"::[type_argument::1.0], "source_type"::"Autre site Web"]);
 				add node(a) to: global_argumentation_graph;
 				list<argument> args <-  (A where ((each.conclusion = "+") and (type_argument in each.criteria.keys))) ;
 				if not empty(args) {
 					list<argument> args_attacks <- nb_attacks among args;
 					loop ag over: args_attacks {
 						if (ag != nil) {
-							bool is_added <- add_attack(a,ag,global_argumentation_graph);
-							is_added <-add_attack(ag,a,global_argumentation_graph);
+							bool is_added <- add_attack(global_argumentation_graph,(a),(ag));
+							is_added <- add_attack(global_argumentation_graph,(ag),(a));
 						} 
 					}	
 				}
@@ -82,6 +82,11 @@ global {
 		
 		do generatePopulation;
 		do generateSocialNetwork(Individual.population,4,0.2);
+	}
+	
+	//return the list of arguments attacked by a
+	list<argument> attacked_by (argument a){
+		return list<argument>((list<pair>(global_argumentation_graph.edges) where (each.key=a)) accumulate (each.value));
 	}
 	
 	reflex save_result when: every(50 #cycle) and save_result_in_csv{

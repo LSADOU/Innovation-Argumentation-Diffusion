@@ -13,16 +13,16 @@ species Individual skills: [argumenting]{
 	
 	int id <- 0;
 	
+	list<argument> known_arguments <- [];
 	string decision_state <- "information request" among: ["information request", "not concerned", "no adoption", "pre adoption", "adoption", "satisfied", "unsatisfied"];
 	string interest <- "maybe" among: ["no", "maybe", "yes"];
 	bool informed <- false;
+	bool satisfied <- false;
+	map<string,float> criteria_importance <- [];
+	map<string,float> source_confidence <- [];
 	list<Individual> relatives <- [];
 	Individual last_connexion;
-	bool satisfied;
 	int cpt_satisfied <- 0;
-	
-	list<argument> known_arguments;
-	
 	
 
 	//*********TPB values***********
@@ -48,26 +48,6 @@ species Individual skills: [argumenting]{
 		ask last_connexion { do influenced_by(myself); }
 	}
 	
-	action update_with_new_argument(Individual source, argument argt) {
-		if (argt != nil) {
-			source.known_arguments >> argt;
-			source.known_arguments << argt;
-			
-			if (argt in known_arguments) {
-				known_arguments >> argt;
-				known_arguments << argt;
-			} else {
-				known_arguments << argt;
-				do add_argument(argt, global_argumentation_graph);
-				if (length(known_arguments) > nb_max_known_arguments) {
-					argument r_arg <- first(known_arguments);
-					do remove_argument(r_arg);
-					known_arguments >>r_arg;
-				}
-			
-			}	
-		}
-	}
 	action influenced_by(Individual i){
 		//Hij is the overlapping intention width between the current individual and i
 		float Hij <- min([i.intention+i.intention_uncertainty, subjective_norm+subjective_norm_uncertainty]) - max([i.intention+i.intention_uncertainty, subjective_norm+subjective_norm_uncertainty]);
@@ -75,14 +55,14 @@ species Individual skills: [argumenting]{
 		subjective_norm_uncertainty <- subjective_norm + social_impact_param * (Hij/i.intention_uncertainty-1) * (i.intention_uncertainty-subjective_norm_uncertainty);
 
 		switch(i.decision_state){
-			match "information request"{ do update_with_new_argument(i,one_of(i.known_arguments)); }
-			match "unsatisfied"{ do update_with_new_argument(i, one_of(i.known_arguments where (each.conclusion = "-"))); } // transmit negative argument
+			match "information request"{ do addArg(one_of(i.known_arguments)); }
+			match "unsatisfied"{ do addArg(one_of(i.known_arguments where (each.conclusion = "-"))); } // transmit negative argument
 			match_one ["pre adoption", "adoption", "satisfied"]{
 				//in those state the agent have a higher probability to transmit positive argument
 				if flip(0.8){
-					do update_with_new_argument(i,one_of(i.known_arguments where (each.conclusion = "+")));
+					do addArg(one_of(i.known_arguments where (each.conclusion = "+")));
 				}else{
-					do update_with_new_argument(i,one_of(i.known_arguments where (each.conclusion = "-")));
+					do addArg(one_of(i.known_arguments where (each.conclusion = "-")));
 				}
 			}
 		}
@@ -99,7 +79,7 @@ species Individual skills: [argumenting]{
 	}
 	
 	action updateAttitude {
-		attitude <- float(make_decision().value);
+		attitude <- getAttitudeFromArgs();
 	}
 	
 	action updateIntentionValues{
@@ -148,6 +128,50 @@ species Individual skills: [argumenting]{
 	
 	
 	
+	float argStrength (argument arg){
+		float strength <- 0.0;
+		loop crit over: arg.criteria.keys{
+			strength <- strength + criteria_importance[string(crit)] * float(arg.criteria[string(crit)]);
+		}
+		strength <- strength * source_confidence[arg.source_type];
+		return strength;
+	}
+	
+	action addArg(argument arg){
+		if arg != nil and !(known_arguments contains arg){
+			known_arguments << arg;
+			if (length(known_arguments) >= nb_max_known_arguments){
+				remove index:0 from:known_arguments;
+			}	
+		}
+	}
+	
+	float getAttitudeFromArgs{
+		list<list<argument>> preferedExtensions <- [];
+		list<argument> attacked_by_offense <- [];
+		argumentation_graph <- directed(graph(known_arguments));
+		
+		loop offense over: known_arguments{
+			attacked_by_offense <- world.attacked_by(offense);
+			loop victim over: attacked_by_offense{
+				if argStrength(offense) > argStrength(victim){
+					argumentation_graph <- argumentation_graph add_edge(offense::victim);
+				}
+			}
+		}
+		
+		preferedExtensions <- preferred_extensions();
+		float max_value <- -2.0;
+		float current_value;
+		loop pe over: preferedExtensions{
+			current_value <- sum(pe collect argStrength(each));
+			max_value <-  abs(current_value) > abs(max_value) ? current_value : max_value ;
+		}
+		
+		return max_value;
+	}
+	
+
 	
 	aspect basic{
 		rgb c <- #white;
