@@ -150,6 +150,7 @@ experiment test_fake_news repeat: 100 type: batch until: cycle = 3000 {
 }
 
 experiment test_stochasticity repeat: 500 type: batch until: cycle = 3000 {
+	parameter nb_fake_news var: nb_fake_news <- 0 among: [0];
 	parameter save_result_in_csv var: save_result_in_csv <- true;
 	parameter type_explo var: type_explo <- "stochasticity";
 	
