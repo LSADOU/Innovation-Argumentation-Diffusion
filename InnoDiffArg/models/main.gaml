@@ -17,6 +17,8 @@ global {
 	string csv_directory <- "../includes/";
 	bool arg_csv_has_header <- true;
 	string arg_csv_namefile <- "MyChoice_argument.csv";
+	bool attack_csv_has_header <- true;
+	string attack_csv_namefile <- "attacks.csv";
 	bool TPB_csv_has_header <- true;
 	string TPB_csv_namefile <- "values_TPB.csv";
 	int scale <- 10;
@@ -47,7 +49,7 @@ global {
 	string type_explo <- "normal";//"stochasticity";
 	int nb_attacks <- 1;
 		
-	int nb_fake_news <- 50;
+	int nb_fake_news <- 0;
 	float mean_intention;
 	float rate_adoption;
 	float pol ;
@@ -58,8 +60,9 @@ global {
 	init{
 		//write "***** start initialisation *****";
 		create Boundaries;
-		do readArg;
-		do computeAttacks;
+		/*do readArg;
+		do readAttacks;*/
+		do generateArgAndAttacks(100, 0.5, 12);
 		
 		list<string> arg_types <- remove_duplicates(A accumulate list<string>(each.criteria.keys));
 		if (nb_fake_news > 0) {
@@ -141,8 +144,8 @@ species Boundaries{
 
 experiment test_fake_news repeat: 100 type: batch until: cycle = 3000 {
 	parameter nb_fake_news var: nb_fake_news among: [100,50,10,5,0];
-		parameter save_result_in_csv var: save_result_in_csv <- true;
-		parameter type_explo var: type_explo <- "normal";
+	parameter save_result_in_csv var: save_result_in_csv <- true;
+	parameter type_explo var: type_explo <- "normal";
 	
 	reflex end_sim {
 		write "num fake news: " + nb_fake_news + " mean intention: " + simulations mean_of each.mean_intention + " mean polarization: " + simulations mean_of each.pol + " mean_adoptions: " + simulations mean_of each.rate_adoption;
@@ -172,37 +175,31 @@ experiment main type: gui {
 		}
 	}
 	
-	reflex update_arguments_distribution{
+	/*reflex update_arguments_distribution{
 		loop argu over:A {
 			argument_distribution[argu.id] <- 0;
 		}
 		loop argu over: Individual.population accumulate each.known_arguments{
 			argument_distribution[argu.id] <- argument_distribution[argu.id] + 1;
 		}
-	}
+	}*/
 	
 	output {
 		
-		display VisualNetwork type: opengl draw_env:false{
+		/*display VisualNetwork type: opengl draw_env:false{
 	    	species Individual aspect: basic;
 		}
 		display VisualIntention type: opengl draw_env:false{
 			species Boundaries aspect: intention_overview;
 	    	species Individual aspect: intention_overview;
-		}
+		}*/
 		
 		display intention_chart {
 			chart "intention distribution according simulation cycles" type: xy series_label_position:none y_range:{-1,1}{
 				datalist Individual collect each.name value: Individual collect each.intention color:#black marker: false thickness:2.0;
 			}
-			/*chart "intention distribution pie" type: pie {
-				data "intention [-1;-0.5]" value: Individual count (each.intention <= -0.5) color:#red;
-				data "intention [-0.5;0.0]" value: Individual count (each.intention > -0.5 and each.intention <= 0.0) color:#pink;
-				data "intention [0.0;0.5]" value: Individual count (each.intention > 0.0 and each.intention <= 0.5) color:#lightgreen;
-				data "intention [0.5;1]" value: Individual count (each.intention > 0.5 and each.intention <= 1) color:#green;
-			}*/
 		}
-		display state_chart {
+		/*display state_chart {
 			chart "decision states histogram" type: histogram{
 				datalist decision_state_distribution.keys value: decision_state_distribution.keys collect decision_state_distribution[each] color:#blue;
 			}
@@ -214,18 +211,18 @@ experiment main type: gui {
 		}
 		display informed_chart {
 			chart "% of not informed people according simulation cycles" type: xy series_label_position:none {
-				data "not informed people" value: (Individual count !each.informed)/length(Individual.population) color:#black marker: false thickness:2.0;
+				data "not informed people" value: (Individual count !each.informed)/length(Individual.population)*100 color:#black marker: false thickness:2.0;
 			}
 		}
 		display interest_chart {
 			chart "% of interested people according simulation cycles" type: xy series_label_position:none {
-				data "interested people" value: (Individual count (each.interest="yes"))/(length(Individual.population)) color:#black marker: false thickness:2.0;
+				data "interested people" value: (Individual count (each.interest="yes"))/(length(Individual.population))*100 color:#black marker: false thickness:2.0;
 			}
 		}
 		display adoption_chart {
 			chart "adoption (in % of pop.) according simulation cycles" type: xy series_label_position:none {
-				data "adoption" value: (Individual count (each.decision_state="adoption" or each.decision_state="satisfied" or each.decision_state="unsatisfied"))/length(Individual.population) color:#black marker: false thickness:2.0;
+				data "adoption" value: (Individual count (each.decision_state="adoption" or each.decision_state="satisfied" or each.decision_state="unsatisfied"))/length(Individual.population)*100 color:#black marker: false thickness:2.0;
 			}
-		}
+		}*/
 	}
 }

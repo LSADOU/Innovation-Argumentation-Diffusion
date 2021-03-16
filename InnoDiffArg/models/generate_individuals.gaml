@@ -65,7 +65,7 @@ global{
 			list<argument> args <- rnd(1,nb_max_known_arguments) among A;
 			loop a over: args {
 				known_arguments << a;
-				 do add_argument(a,global_argumentation_graph);
+				do add_argument(a,global_argumentation_graph);
 			}
 			loop criterion over: arguments_criteria{
 				crit_importance[criterion] <- rnd(0.0, 1.0);
@@ -73,11 +73,11 @@ global{
 			loop source over: source_types{
 				source_type_confidence[source] <- rnd(1.0);
 			}
+			best_ext <- get_best_extension().key;
+			
 		 	int cluster <- rnd(1,nb_clusters);
 			
-			attitude <- myself.getAttitude(cluster);
 			attitude_weight <- weight_attitude_nonadopters;
-			attitude_uncertainty <- myself.getAttitudeUncertainty(cluster)/2;
 	
 			subjective_norm <- myself.getSubjectiveNorm(cluster);
 			subjective_norm_weight <- weight_subnorm_nonadopters;
