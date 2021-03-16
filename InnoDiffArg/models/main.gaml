@@ -60,9 +60,9 @@ global {
 	init{
 		//write "***** start initialisation *****";
 		create Boundaries;
-		/*do readArg;
-		do readAttacks;*/
-		do generateArgAndAttacks(100, 0.5, 12);
+		do readArg;
+		do readAttacks;
+		//do generateArgAndAttacks(100, 0.5, 12);
 		
 		list<string> arg_types <- remove_duplicates(A accumulate list<string>(each.criteria.keys));
 		if (nb_fake_news > 0) {
