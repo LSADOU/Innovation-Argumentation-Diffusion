@@ -24,12 +24,11 @@ species Individual skills: [argumenting]{
 	list<argument> known_arguments;
 	
 	//*********Debate variables**********
-	// received attacks list [attack::attacked,...]
-	list<pair<argument,argument>> D_in <- [];
 	// attacks sent list [attack::attacked,...]
-	list<pair<argument,argument>> D_out <- [];
+	map<argument,list<argument>> D_out <- [];
 	list<argument> best_ext <- [];
 	argument debate_arg;
+	int depth_dial <- 0;
 	
 	//*********TPB values***********
 	
@@ -66,28 +65,30 @@ species Individual skills: [argumenting]{
 	
 	// action based on MS dialogue
 	action reactInitiateDebate(Individual initiator, argument d_arg){
+		depth_dial <- max ([1,depth_dial]);
 		debate_arg <- d_arg;
 		if (best_ext contains debate_arg){
 			// the current agent agrees with initiator because the debate argument is in the current agent best extension	
 			do debateEnd(initiator,"OK");
 		}else{
-			//Hij is the overlapping intention width between the current individual and i
-			float Hij <- min([initiator.intention+initiator.intention_uncertainty, intention+intention_uncertainty]) - max([initiator.intention-initiator.intention_uncertainty, intention-intention_uncertainty]);
-			if (Hij > intention_uncertainty){
-				//the current agent trusts the initiator so acquires the argument
-				do addArg(debate_arg);
-				do debateEnd(initiator,"OK");
-			}else{
-				//the current agent doesn't trust the initiator so it will send him an argument that attacks debate_arg	
-				argument attacking_arg <- getAttackingArg(debate_arg);
-				if (attacking_arg = nil){
-					// there is no attack to the debate arg so the debate end here
-					do debateEnd(initiator,"KO");
-				}else{
-					D_out << attacking_arg::debate_arg;
-					ask initiator{
-						do reactAttack(myself, attacking_arg, debate_arg);
+			argument attacking_arg <- computeAttackingArg(debate_arg);
+			if (attacking_arg = nil){
+				//Hij is the overlapping intention width between the current individual and i
+				float Hij <- min([initiator.intention+initiator.intention_uncertainty, intention+intention_uncertainty]) - max([initiator.intention-initiator.intention_uncertainty, intention-intention_uncertainty]);
+				if Hij > intention_uncertainty {
+					if not contains(known_arguments, debate_arg){
+						//the current agent trusts the initiator and doesn't know the argument then it adds it to his graph
+						do addArg(debate_arg);
 					}
+					do debateEnd(initiator,"OK");
+				}else{
+					//the current agent doesn't trust the initiator and there is no argument attacking debate_arg so the debate end here
+					do debateEnd(initiator,"KO");
+				}
+			}else{
+				do addAttackToDout(attacking_arg,debate_arg);
+				ask initiator{
+					do reactAttack(myself, attacking_arg, debate_arg);
 				}
 			}
 		}
@@ -95,19 +96,18 @@ species Individual skills: [argumenting]{
 
 	// action based on MS dialogue
 	action reactAttack(Individual opponent, argument attack_arg, argument attacked_arg){
-		D_in << attack_arg::attacked_arg;
+		depth_dial <- max ([2,depth_dial]);
 		if(known_arguments contains attack_arg){
-			argument attacking_arg <- getAttackingArg(attack_arg);
+			argument attacking_arg <- computeAttackingArg(attack_arg);
 			if (attacking_arg = nil){
 				float Hij <- min([opponent.intention+opponent.intention_uncertainty, intention+intention_uncertainty]) - max([opponent.intention-opponent.intention_uncertainty, intention-intention_uncertainty]);
 				if (Hij > intention_uncertainty){
-					do addArg(debate_arg);
 					do debateEnd(opponent,"OK");
 				}else{
 					do debateEnd(opponent,"KO");
 				}
 			}else{
-				D_out << attacking_arg::attacked_arg;
+				do addAttackToDout(attacking_arg,attack_arg);
 				ask opponent{
 					do reactAttack(myself, attacking_arg, attack_arg);
 				}
@@ -126,7 +126,6 @@ species Individual skills: [argumenting]{
 				}
 			}else{
 				//the current agent doesn't trust the opponent so rebut the attack
-				D_out << attack_arg::attacked_arg;
 				ask opponent{
 					do reactRebut(myself, attack_arg, attacked_arg);
 				}
@@ -135,29 +134,28 @@ species Individual skills: [argumenting]{
 	}
 	
 	// action based on MS dialogue
-	action reactRebut(Individual opponent, argument attacking_arg, argument attacked_arg){
+	action reactRebut(Individual opponent, argument attacking_arg_r, argument attacked_arg){
+		depth_dial <- max ([3,depth_dial]);
 		//Hij is the overlapping intention width between the current individual and i
 		float Hij <- min([opponent.intention+opponent.intention_uncertainty, intention+intention_uncertainty]) - max([opponent.intention-opponent.intention_uncertainty, intention-intention_uncertainty]);
 		if (Hij > intention_uncertainty){
 			//the current agent trusts the opponent so delete the argument and adds the debate argument (if not present)
-			do remove_argument(attacking_arg);
-			if not contains(known_arguments, debate_arg){
-				do addArg(debate_arg);
+			do remove_argument(attacking_arg_r);
+			if not contains(known_arguments, attacked_arg){
+				do addArg(attacked_arg);
 			}
 			best_ext <- get_best_extension().key;
-			if(best_ext contains debate_arg){
-				subjective_norm <- subjective_norm + social_impact_param *  (1 - opponent.intention_uncertainty) * (opponent.intention-subjective_norm );
-				subjective_norm_uncertainty <- subjective_norm_uncertainty + social_impact_param * (opponent.intention_uncertainty-subjective_norm_uncertainty);
+			if(best_ext contains attacked_arg){
 				do debateEnd(opponent,"OK");
 			}else{
-				//debate_arg still not in best extension then there is an argument attacking it
-				argument attacking_arg <- getAttackingArg(debate_arg);
+				argument attacking_arg <- computeAttackingArg(attacked_arg);
 				if (attacking_arg = nil){
-					write "error: argument "+ attacked_arg + " is in best extension but not defended by other argument." color: #red;
-				}
-				D_out << attacking_arg::attacked_arg;
-				ask opponent{
-					do reactAttack(myself, attacking_arg, debate_arg);
+					do debateEnd(opponent,"OK");
+				}else{
+					do addAttackToDout(attacking_arg,attacked_arg);
+					ask opponent{
+						do reactAttack(myself, attacking_arg, attacked_arg);
+					}
 				}
 			}
 		}else{
@@ -166,13 +164,13 @@ species Individual skills: [argumenting]{
 	}
 	
 	action debateEnd(Individual contact, string ending){
-		
+		depth_all_dial[depth_dial] <- depth_all_dial[depth_dial] +1;
 		subjective_norm <- subjective_norm + social_impact_param *  (1 - contact.intention_uncertainty) * (contact.intention-subjective_norm );
 		subjective_norm_uncertainty <- subjective_norm_uncertainty + social_impact_param * (contact.intention_uncertainty-subjective_norm_uncertainty);
 		best_ext <- get_best_extension().key;
-		D_in <- [];
 		D_out <- [];
 		debate_arg <- nil;
+		depth_dial <- 0;
 		do updateInformed;
 		do updateAttitude;
 		do updateIntentionValues;
@@ -183,9 +181,9 @@ species Individual skills: [argumenting]{
 			subjective_norm <- subjective_norm + social_impact_param *  (1 - myself.intention_uncertainty) * (myself.intention-subjective_norm );
 			subjective_norm_uncertainty <- subjective_norm_uncertainty + social_impact_param * (myself.intention_uncertainty-subjective_norm_uncertainty);
 			best_ext <- get_best_extension().key;
-			D_in <- [];
 			D_out <- [];
 			debate_arg <- nil;
+			depth_dial <- 0;
 			do updateInformed;
 			do updateAttitude;
 			do updateIntentionValues;
@@ -195,69 +193,42 @@ species Individual skills: [argumenting]{
 	}
 	
 	//return an argument attacking argt argument 
-	argument getAttackingArg(argument argt){
+	argument computeAttackingArg(argument argt){
 		argument attacking_arg;
 		// first we look for an attacking arg in the best extension that is not already used in the debate
-		list<argument> best_ext_diff_D_out <- best_ext where not contains(D_out,each::argt);
-		attacking_arg <- one_of(best_ext_diff_D_out inter attacked_by[argt]);
+		loop argu over: best_ext{
+			if (attacked_by[argt] contains argu) and not contains(getDoutFor(argu),argt){
+				attacking_arg <- argu;
+				break;
+			}
+		}
 		// if no arg was found before we look for other arguments presents in the known arguments that is not already used in the debate
 		if(attacking_arg = nil){
-			list<argument> known_arg_diff_D_out <- known_arguments where not contains(D_out,each::argt);
-			attacking_arg <- one_of(known_arguments inter attacked_by[argt]);
-		}
-		if(attacking_arg = nil){
-			//write "NO ATTACKING ARG FOUND" color:#red;
+			loop argu over: known_arguments{
+				if (attacked_by[argt] contains argu) and not contains(getDoutFor(argu),argt){
+					attacking_arg <- argu;
+					break;
+				}
+			}
 		}
 		return attacking_arg;
 	}
 	
-	action influenced_by(Individual i){
-		
-		subjective_norm <- subjective_norm + social_impact_param *  (1 - i.intention_uncertainty) * (i.intention-subjective_norm );
-		subjective_norm_uncertainty <- subjective_norm_uncertainty + social_impact_param * (i.intention_uncertainty-subjective_norm_uncertainty);
-		
-		//Hij is the overlapping intention width between the current individual and i			
-		float Hij <- min([i.intention+i.intention_uncertainty, intention+intention_uncertainty]) - max([i.intention-i.intention_uncertainty, intention-intention_uncertainty]);
-		
-		if (Hij > i.intention_uncertainty){
-			switch(i.decision_state){
-				match "information request"{ do update_with_new_argument(i,one_of(i.known_arguments)); }
-				match "unsatisfied"{ do update_with_new_argument(i, one_of(i.known_arguments where (each.conclusion = "-"))); } // transmit negative argument
-				match_one ["pre adoption", "adoption", "satisfied"]{
-					//in those states the agent have a higher probability to transmit positive argument
-					if flip(0.8){
-						do update_with_new_argument(i,one_of(i.known_arguments where (each.conclusion = "+")));
-					}else{
-						do update_with_new_argument(i,one_of(i.known_arguments where (each.conclusion = "-")));
-					}
-				}
+	action addAttackToDout(argument attacking, argument attacked){
+		if D_out.keys contains attacking{
+			if not contains(D_out[attacking], attacked){
+				D_out[attacking] << attacked;
 			}
-			do updateInformed;
-			do updateAttitude;
-			do updateIntentionValues;
-			do updateInterest;
-			do updateDecisionState;	
+		}else{
+			D_out[attacking] <- [attacked];
 		}
 	}
 	
-	action update_with_new_argument(Individual source, argument argt) {
-		if (argt != nil) {
-			source.known_arguments >> argt;
-			source.known_arguments << argt;
-			
-			if (argt in known_arguments) {
-				known_arguments >> argt;
-				known_arguments << argt;
-			} else {
-				known_arguments << argt;
-				do add_argument(argt, global_argumentation_graph);
-				if (length(known_arguments) > nb_max_known_arguments) {
-					argument r_arg <- first(known_arguments);
-					do remove_argument(r_arg);
-					known_arguments >>r_arg;
-				}
-			
-			}	
+	list<argument> getDoutFor(argument attacking){
+		if D_out.keys contains attacking{
+			return D_out[attacking];
+		}else{
+			return [];
 		}
 	}
 	

@@ -14,6 +14,8 @@ global {
 	file arg_csv <- csv_file(""+csv_directory+arg_csv_namefile, ",", string, false);
 	file attack_csv <- csv_file(""+csv_directory+attack_csv_namefile, ",", string, attack_csv_has_header);
 	matrix attack_data <- matrix (attack_csv);
+	list<argument> pros_arg <- [];
+	list<argument> cons_arg <- [];
 	map<string, argument> argument_by_id <- [];
 	map<argument,list<argument>> attacks <- [];
 	map<argument,list<argument>> attacked_by <- [];
@@ -26,18 +28,18 @@ global {
 		loop a over: loaded_arguments {
 			add  node(a) to: global_argumentation_graph;
 			argument_by_id[a.id] <- a;
+			if a.conclusion = "+"{
+				pros_arg << a;
+			}else{
+				cons_arg << a;
+			}
 			attacks[a]<- [];
 			attacked_by[a]<-[];
 		}
 		
 		source_types <- remove_duplicates(A collect each.source_type);
 		arguments_criteria <- remove_duplicates(A accumulate each.criteria.keys);
-		write "there are " + length(argument_by_id.keys) + " arguments";
-	/*  write "Sources are ";
-		write source_types;
-		write "criterias are ";
-		write arguments_criteria;*/
-		
+		write "there are " + length(argument_by_id.keys) + " arguments, with "+length(pros_arg)+ " pros and "+length(cons_arg)+" cons arguments";
 	}
 	
 	action computeAttacks {
@@ -98,21 +100,20 @@ global {
 				}
 			}
 		}
+		
 		write "there are/is " + nb_sym + " symetric attacks";
 		write sym_list;
 		write "there are/is " + nb_conflict + " conflict attacks (symetric, different conclusion but same criteria)";
 		write conflict_list;
 	}
 	
-	action generateArgAndAttacks(int nb_arg, float proba_pro_arg, int mean_nb_attack){
+	action generateArgAndAttacks(int nb_arg, int nb_pro_arg, int mean_nb_attack){
 		source_types <- ["source A","source B","source C","source D","source E"];
 		arguments_criteria <- ["criterion A","criterion B","criterion C","criterion D","criterion E"];
-		global_argumentation_graph<- directed(graph([]));
-		list<argument> pros_arg <- [];
-		list<argument> cons_arg <- [];
+		global_argumentation_graph <- directed(graph([]));
 		
 		loop id from: 1 to: nb_arg{
-			argument argu <- argument(["id"::string(id),"conclusion"::(flip(proba_pro_arg) ? "+" : "-"),"criteria"::[one_of(arguments_criteria)::1.0],"source_type"::one_of(source_types)]);
+			argument argu <- argument(["id"::string(id), "conclusion"::length(pros_arg) < nb_pro_arg? "+":"-", "criteria"::[one_of(arguments_criteria)::1.0], "source_type"::one_of(source_types)]);
 			add  node(argu) to: global_argumentation_graph;
 			if argu.conclusion = "+"{
 				pros_arg << argu;
@@ -124,13 +125,13 @@ global {
 			attacked_by[argu]<-[];
 		}
 		
-		write "there are " + nb_arg + " arguments";
+		write "there are " + nb_arg + " arguments, with "+length(pros_arg)+ " pros and "+length(cons_arg)+" cons arguments";
 		
 		int nb_attack <- 0;
 		
 		loop arg1 over: A{
 			loop times: max([gauss(mean_nb_attack, mean_nb_attack/2),0]){
-				argument arg2 <- arg1.conclusion = "+" ? one_of(cons_arg where not contains(attacks[arg1],each)) : one_of(pros_arg where not contains(attacks[arg1],each));
+				argument arg2 <- arg1.conclusion = "+" ? one_of(cons_arg where (not contains(attacks[arg1],each))): one_of(pros_arg where (not contains(attacks[arg1],each)));
 				attacks[arg1] << arg2;
 				attacked_by[arg2] << arg1;
 				add edge(arg1::arg2) to: global_argumentation_graph;
@@ -141,6 +142,20 @@ global {
 		write ""+nb_attack+" attack(s) computed";
 		do nb_conflict_attacks;
 		
+	}
+	
+	action AddFakeNews{
+		loop i from: 1 to: nb_fake_news {
+			argument a <- argument(["id":: "fake_news_" + i, "conclusion"::"-", "criteria"::[one_of(arguments_criteria)::1.0], "source_type"::one_of(source_types)]);
+			add node(a) to: global_argumentation_graph;
+			cons_arg << a;
+			attacks[a]<- [];
+			attacked_by[a]<-[];
+			list<argument> args_to_attack <-  nb_attacks_fake_news among (pros_arg where (each.criteria[0] = a.criteria[0]));
+			loop a2 over:args_to_attack{
+				add edge(a::a2) to:global_argumentation_graph;
+			}
+		}
 	}
 	
 }

@@ -33,6 +33,10 @@ global {
 	float adoption_threshold <- 0.56;
 	float avg_network_degree <- 4.60;
 	
+	map<string,list<float>> weight_TPB <-["social_profile"::[0.23,0.65,0.12],
+										  "marginal"::[0.60,0.23,0.17],
+										  "extremist"::[1.0,0.0,0.0]];
+										  
 	float weight_attitude_nonadopters <- 0.229;
 	float weight_subnorm_nonadopters <- 0.610;
 	float weight_PBC_nonadopters <- 0.161;
@@ -46,10 +50,12 @@ global {
 	list source_types <- [];
 	list arguments_criteria <- [];
 	
-	string type_explo <- "normal";//"stochasticity";
-	int nb_attacks <- 1;
-		
+	//depth of all dialogues that occured in this step
+	map<int,int> depth_all_dial <-[0::0,1::0,2::0,3::0];
+	
+	string type_explo <- "normal";//"stochasticity";	
 	int nb_fake_news <- 0;
+	int nb_attacks_fake_news <- 1;
 	float mean_intention;
 	float rate_adoption;
 	float pol ;
@@ -58,33 +64,19 @@ global {
 	list<argument> A -> {global_argumentation_graph.vertices};
 	
 	init{
-		//write "***** start initialisation *****";
 		create Boundaries;
 		do readArg;
 		do readAttacks;
-		//do generateArgAndAttacks(100, 0.5, 12);
-		
-		list<string> arg_types <- remove_duplicates(A accumulate list<string>(each.criteria.keys));
+		//do generateArgAndAttacks(40, 24, 3);
 		if (nb_fake_news > 0) {
-			loop i from: 1 to: nb_fake_news {
-				string type_argument <- one_of(arg_types);
-				argument a <- argument(["id":: "fake_new_ " + i ,"option"::"", "conclusion"::"-", "criteria"::[type_argument::1.0], "source_type"::"Autre site Web"]);
-				add node(a) to: global_argumentation_graph;
-				list<argument> args <-  (A where ((each.conclusion = "+") and (type_argument in each.criteria.keys))) ;
-				if not empty(args) {
-					list<argument> args_attacks <- nb_attacks among args;
-					loop ag over: args_attacks {
-						if (ag != nil) {
-							add edge(a::ag) to:global_argumentation_graph;
-							add edge(ag::a) to:global_argumentation_graph;
-						} 
-					}	
-				}
-			}
+			do AddFakeNews;
 		}
-		
 		do generatePopulation;
 		do generateSocialNetwork(Individual.population,4,0.2);
+	}
+	
+	reflex reset_dial_depth{
+		depth_all_dial <-[0::0,1::0,2::0,3::0];
 	}
 	
 	reflex save_result when: every(50 #cycle) and save_result_in_csv{
@@ -156,8 +148,8 @@ experiment test_stochasticity repeat: 500 type: batch until: cycle = 3000 {
 	parameter nb_fake_news var: nb_fake_news <- 0 among: [0];
 	parameter save_result_in_csv var: save_result_in_csv <- true;
 	parameter type_explo var: type_explo <- "stochasticity";
-	
 }
+
 experiment main type: gui {
 //	float minimum_cycle_duration <- 0.1;
 	
@@ -175,21 +167,21 @@ experiment main type: gui {
 		}
 	}
 	
-	/*reflex update_arguments_distribution{
+	reflex update_arguments_distribution{
 		loop argu over:A {
 			argument_distribution[argu.id] <- 0;
 		}
 		loop argu over: Individual.population accumulate each.known_arguments{
 			argument_distribution[argu.id] <- argument_distribution[argu.id] + 1;
 		}
-	}*/
+	}
 	
 	output {
 		
 		/*display VisualNetwork type: opengl draw_env:false{
 	    	species Individual aspect: basic;
-		}
-		display VisualIntention type: opengl draw_env:false{
+		}*/
+		/*display VisualIntention type: opengl draw_env:false{
 			species Boundaries aspect: intention_overview;
 	    	species Individual aspect: intention_overview;
 		}*/
@@ -203,13 +195,20 @@ experiment main type: gui {
 			chart "decision states histogram" type: histogram{
 				datalist decision_state_distribution.keys value: decision_state_distribution.keys collect decision_state_distribution[each] color:#blue;
 			}
-		}
+		}*/
 		display arguments_chart {
 			chart "occurence number of arguments histogram" type: histogram{
 				datalist argument_distribution.keys value: argument_distribution.keys collect argument_distribution[each] color:#blue;
 			}
 		}
-		display informed_chart {
+		/*display dialogue_chart {
+			chart "depth of all dialogue" type: xy {
+				data "depth 1" value: depth_all_dial[1] color:#red marker: false thickness:2.0;
+				data "depth 2" value: depth_all_dial[2] color:#green marker: false thickness:2.0;
+				data "depth 3" value: depth_all_dial[3] color:#blue marker: false thickness:2.0;
+			}
+		}*/
+		/*display informed_chart {
 			chart "% of not informed people according simulation cycles" type: xy series_label_position:none {
 				data "not informed people" value: (Individual count !each.informed)/length(Individual.population)*100 color:#black marker: false thickness:2.0;
 			}
