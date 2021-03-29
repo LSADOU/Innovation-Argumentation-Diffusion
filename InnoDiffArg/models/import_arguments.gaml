@@ -81,7 +81,7 @@ global {
 	}
 	
 	action nb_conflict_attacks{
-		
+
 		int nb_sym <- 0;
 		int nb_conflict <- 0;
 		
@@ -100,7 +100,6 @@ global {
 				}
 			}
 		}
-		
 		write "there are/is " + nb_sym + " symetric attacks";
 		write sym_list;
 		write "there are/is " + nb_conflict + " conflict attacks (symetric, different conclusion but same criteria)";
@@ -158,5 +157,24 @@ global {
 		}
 	}
 	
+	action addStrongConsArgument{
+		argument a <- argument(["id":: "strong_arg_", "conclusion"::"-", "criteria"::[one_of(arguments_criteria)::1.0], "source_type"::one_of(source_types)]);
+		attacks[a]<- [];
+		attacked_by[a]<-[];
+		cons_arg << a;
+		argument a2 <- last(pros_arg sort_by (length(attacks[each])));
+		write "A cons argument has been added against the strong argument "+ a2;
+		add edge(a::a2) to: global_argumentation_graph;
+	}
+	
+	action addStrongProArgument{
+		argument a <- argument(["id":: "strong_arg", "conclusion"::"+", "criteria"::[one_of(arguments_criteria)::1.0], "source_type"::one_of(source_types)]);
+		attacks[a]<- [];
+		attacked_by[a]<-[];
+		pros_arg << a;
+		argument a2 <- last(cons_arg sort_by (length(attacks[each])));
+		write "A pro argument has been added against the strong argument "+ a2;
+		add edge(a::a2) to: global_argumentation_graph;
+	}
 }
 

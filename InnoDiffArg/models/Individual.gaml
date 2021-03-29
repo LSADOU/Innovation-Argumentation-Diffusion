@@ -250,7 +250,7 @@ species Individual skills: [argumenting]{
 		attitude <- float(make_decision().value);
 		//attitude_uncertainty is the mean value for known arguments sources confidences
 		list<float> conf_list <- known_arguments collect source_type_confidence[each.source_type];
-		attitude_uncertainty <- mean(conf_list);
+		attitude_uncertainty <- 1-mean(conf_list);
 	}
 	
 	action updateIntentionValues{

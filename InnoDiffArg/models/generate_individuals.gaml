@@ -49,10 +49,10 @@ global{
 		do readTPBdata;
 		
 		// this part computes agents locations to form a lattice ring
-		float inter <- 2 * #pi / population_size;
+		float inter <- 2 * #pi / (population_size + nb_extremist);
 		list<point> indiv_locations <- [];
 		float x <- 0.0;
-		loop times: population_size {
+		loop times: (population_size + nb_extremist) {
 			indiv_locations << point(cos_rad(x)*80,sin_rad(x)*80);
 			x <- x +  inter;
 		}
@@ -96,6 +96,42 @@ global{
 			id <- cpt;
 			cpt <- cpt+1;
 		}
+		
+		create Individual number: nb_extremist{
+			
+			argumentation_graph <- graph([]);
+			list<argument> args <- rnd(1,nb_max_known_arguments) among pros_arg;
+			loop a over: args {
+				known_arguments << a;
+				do add_argument(a,global_argumentation_graph);
+			}
+			loop criterion over: arguments_criteria{
+				crit_importance[criterion] <- 1.0;
+			}
+			loop source over: source_types{
+				source_type_confidence[source] <- 1.0;
+			}
+			best_ext <- get_best_extension().key;
+			
+			attitude_weight <- 1.0;
+	
+			subjective_norm <- 1.0;
+			subjective_norm_weight <- 0.0;
+			subjective_norm_uncertainty <- 0.0;
+	
+			perceived_behavioural_control <- 0.0;
+			perceived_behavioural_control_weight <- 0.0;
+			
+			do updateInformed;
+			do updateAttitude;
+			do updateIntentionValues;
+			do updateInterest;
+			do updateDecisionState;
+			
+			location <- indiv_locations[cpt];
+			id <- cpt;
+			cpt <- cpt+1;
+		}
 	}
 	
 	float getAttitude (int cluster){
@@ -114,5 +150,4 @@ global{
 		return gauss(TPBmap[cluster]["PBC"].key,TPBmap[cluster]["PBC"].value);
 	}
 
-	
 }

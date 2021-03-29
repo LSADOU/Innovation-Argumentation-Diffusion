@@ -25,6 +25,7 @@ global {
 	
 	int population_size <- 60;
 	float social_impact_param <- 0.1;
+	int nb_neighbors <- 6;
 	int nb_relevents_args <- 4;
 	int nb_max_known_arguments <- 7;
 	int p <- 10;
@@ -55,6 +56,9 @@ global {
 	
 	string type_explo <- "normal";//"stochasticity";	
 	int nb_fake_news <- 0;
+	bool addStrongArg <- false;
+	float add_PBC <- 0.5;
+	int nb_extremist <- 0;
 	int nb_attacks_fake_news <- 1;
 	float mean_intention;
 	float rate_adoption;
@@ -71,8 +75,11 @@ global {
 		if (nb_fake_news > 0) {
 			do AddFakeNews;
 		}
+		if addStrongArg {
+			do addStrongConsArgument;
+		}
 		do generatePopulation;
-		do generateSocialNetwork(Individual.population,4,0.2);
+		do generateSocialNetwork(Individual.population,nb_neighbors,0.2);
 	}
 	
 	reflex reset_dial_depth{
@@ -150,6 +157,16 @@ experiment test_stochasticity repeat: 500 type: batch until: cycle = 3000 {
 	parameter type_explo var: type_explo <- "stochasticity";
 }
 
+/*experiment test_add_arg_influencer repeat: 100 type: batch until: cycle = 3000 {
+	parameter nb_fake_news var: nb_fake_news among: [100,50,10,5,0];
+	parameter save_result_in_csv var: save_result_in_csv <- true;
+	parameter type_explo var: type_explo <- "normal";
+	
+	reflex end_sim {
+		write "num fake news: " + nb_fake_news + " mean intention: " + simulations mean_of each.mean_intention + " mean polarization: " + simulations mean_of each.pol + " mean_adoptions: " + simulations mean_of each.rate_adoption;
+	}
+}*/
+
 experiment main type: gui {
 //	float minimum_cycle_duration <- 0.1;
 	
@@ -181,10 +198,10 @@ experiment main type: gui {
 		/*display VisualNetwork type: opengl draw_env:false{
 	    	species Individual aspect: basic;
 		}*/
-		/*display VisualIntention type: opengl draw_env:false{
+		display VisualIntention type: opengl draw_env:false{
 			species Boundaries aspect: intention_overview;
 	    	species Individual aspect: intention_overview;
-		}*/
+		}
 		
 		display intention_chart {
 			chart "intention distribution according simulation cycles" type: xy series_label_position:none y_range:{-1,1}{
@@ -196,11 +213,11 @@ experiment main type: gui {
 				datalist decision_state_distribution.keys value: decision_state_distribution.keys collect decision_state_distribution[each] color:#blue;
 			}
 		}*/
-		display arguments_chart {
+		/*display arguments_chart {
 			chart "occurence number of arguments histogram" type: histogram{
 				datalist argument_distribution.keys value: argument_distribution.keys collect argument_distribution[each] color:#blue;
 			}
-		}
+		}*/
 		/*display dialogue_chart {
 			chart "depth of all dialogue" type: xy {
 				data "depth 1" value: depth_all_dial[1] color:#red marker: false thickness:2.0;
