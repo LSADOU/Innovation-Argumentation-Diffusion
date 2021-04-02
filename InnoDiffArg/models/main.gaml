@@ -15,6 +15,7 @@ global {
 
 
 	string csv_directory <- "../includes/";
+	string output_directory <- "../output/";
 	bool arg_csv_has_header <- true;
 	string arg_csv_namefile <- "MyChoice_argument.csv";
 	bool attack_csv_has_header <- true;
@@ -25,7 +26,7 @@ global {
 	
 	int population_size <- 60;
 	float social_impact_param <- 0.1;
-	int nb_neighbors <- 6;
+	int nb_neighbors <- 4;
 	int nb_relevents_args <- 4;
 	int nb_max_known_arguments <- 7;
 	int p <- 10;
@@ -54,9 +55,9 @@ global {
 	//depth of all dialogues that occured in this step
 	map<int,int> depth_all_dial <-[0::0,1::0,2::0,3::0];
 	
-	string type_explo <- "normal";//"stochasticity";	
+	string type_explo;
 	int nb_fake_news <- 0;
-	bool addStrongArg <- false;
+	int nb_strong_arg_added <- 0;
 	float add_PBC <- 0.5;
 	int nb_extremist <- 0;
 	int nb_attacks_fake_news <- 1;
@@ -72,10 +73,11 @@ global {
 		do readArg;
 		do readAttacks;
 		//do generateArgAndAttacks(40, 24, 3);
-		if (nb_fake_news > 0) {
+		if nb_fake_news > 0 {
+			write "adding "+nb_fake_news+" fake news.";
 			do AddFakeNews;
 		}
-		if addStrongArg {
+		loop times: nb_strong_arg_added{
 			do addStrongConsArgument;
 		}
 		do generatePopulation;
@@ -88,15 +90,18 @@ global {
 	
 	reflex save_result when: every(50 #cycle) and save_result_in_csv{
 		
-		 pol <- polarization();
-		 mean_intention <- Individual mean_of (each.intention);
-		 rate_adoption <- (Individual count (each.decision_state="adoption" or each.decision_state="satisfied" or each.decision_state="unsatisfied"))/length(Individual.population);
-		
-			
-		string 	results <- ""+ int(self)+"," + seed+","+nb_fake_news+","+ cycle + ","+	pol+"," +mean_intention+","+rate_adoption;
-		
-		
-		save results to: type_explo + "/results_" + type_explo+ "_"+nb_fake_news+".csv" type:text rewrite: false;
+		pol <- polarization();
+		mean_intention <- Individual mean_of (each.intention);
+		rate_adoption <- (Individual count (each.decision_state="adoption" or each.decision_state="satisfied" or each.decision_state="unsatisfied"))/length(Individual.population);
+		string 	results <- "";
+		switch(type_explo){
+			match "strong_arg"{results <- ""+ int(self)+","+seed+","+nb_strong_arg_added+","+ cycle + ","+	pol+"," +mean_intention+","+rate_adoption; }
+			match "fake_news"{results <- ""+ int(self)+","+seed+","+nb_fake_news+","+ cycle + ","+	pol+"," +mean_intention+","+rate_adoption; }
+			match "extremist"{results <- ""+ int(self)+","+seed+","+nb_extremist+","+ cycle + ","+	pol+"," +mean_intention+","+rate_adoption; }
+			match "stochasticity"{results <- ""+ int(self)+","+seed+","+ cycle+","+pol+","+mean_intention+","+rate_adoption; }
+			match "test"{results <- ""+ int(self)+","+seed+","+ cycle+","+pol+","+mean_intention+","+rate_adoption; }
+		}
+		save results to: output_directory+type_explo+"_results.csv" type:text rewrite: false;
 	}
 	
 	float polarization{
@@ -119,7 +124,6 @@ global {
 		polarization <- polarization / (1 * (N + 1) * N);
 		return polarization;
 	}
-	
 }
 
 species Boundaries{
@@ -144,28 +148,82 @@ species Boundaries{
 experiment test_fake_news repeat: 100 type: batch until: cycle = 3000 {
 	parameter nb_fake_news var: nb_fake_news among: [100,50,10,5,0];
 	parameter save_result_in_csv var: save_result_in_csv <- true;
-	parameter type_explo var: type_explo <- "normal";
+	parameter type_explo var: type_explo <- "fake_news";
+	
+	init{
+		string header_csv <- "id_exp,seed,nb_fake_news,step,polarisation,mean_intention,rate_adoption";
+		save header_csv to: output_directory+"fake_news_results.csv" type:text rewrite: true;
+		write "The file "+output_directory+"fake_news_results.csv is created/reset to store data from this experiment" color:#green;
+	}
 	
 	reflex end_sim {
-		write "num fake news: " + nb_fake_news + " mean intention: " + simulations mean_of each.mean_intention + " mean polarization: " + simulations mean_of each.pol + " mean_adoptions: " + simulations mean_of each.rate_adoption;
+		write "END BATCH" color:#red;
+	}
+}
+
+experiment test_strong_arg repeat: 100 type: batch until: cycle = 3000 {
+	
+	parameter strong_arg_added var: nb_strong_arg_added among: [0,1,2,5,10];
+	parameter save_result_in_csv var: save_result_in_csv <- true;
+	parameter type_explo var: type_explo <- "strong_arg";
+	
+	init{
+		string header_csv <- "id_exp,seed,nb_strong_arg_added,step,polarisation,mean_intention,rate_adoption";
+		save header_csv to: output_directory+"strong_arg_results.csv" type:text rewrite: true;
+		write "The file "+output_directory+"strong_arg_results.csv is created/reset to store data from this experiment" color:#green;
+	}
+	
+	reflex end_sim {
+		write "END BATCH" color:#red;
+	}
+}
+
+experiment test_extremist repeat: 100 type: batch until: cycle = 3000 {
+	parameter nb_extremist var: nb_extremist <- 0 among: [0,1,5,10];
+	parameter save_result_in_csv var: save_result_in_csv <- true;
+	parameter type_explo var: type_explo <- "extremist";
+	
+	init{
+		string header_csv <- "id_exp,seed,nb_extremists,step,polarisation,mean_intention,rate_adoption";
+		save header_csv to: output_directory+"extremist_results.csv" type:text rewrite: true;
+		write "The file "+output_directory+"extremist_results.csv is created/reset to store data from this experiment" color:#green;
+	}
+	
+	reflex end_sim{
+		write "END BATCH" color:#red;
 	}
 }
 
 experiment test_stochasticity repeat: 500 type: batch until: cycle = 3000 {
-	parameter nb_fake_news var: nb_fake_news <- 0 among: [0];
 	parameter save_result_in_csv var: save_result_in_csv <- true;
 	parameter type_explo var: type_explo <- "stochasticity";
-}
-
-/*experiment test_add_arg_influencer repeat: 100 type: batch until: cycle = 3000 {
-	parameter nb_fake_news var: nb_fake_news among: [100,50,10,5,0];
-	parameter save_result_in_csv var: save_result_in_csv <- true;
-	parameter type_explo var: type_explo <- "normal";
+	
+	init{
+		string header_csv <- "id_exp,seed,step,polarisation,mean_intention,rate_adoption";	
+		save header_csv to: output_directory+"stochasticity_results.csv" type:text rewrite: true;
+		write "The file "+output_directory+"test_results.csv is created/reset to store data from this experiment" color:#green;
+	}
 	
 	reflex end_sim {
-		write "num fake news: " + nb_fake_news + " mean intention: " + simulations mean_of each.mean_intention + " mean polarization: " + simulations mean_of each.pol + " mean_adoptions: " + simulations mean_of each.rate_adoption;
+		write "END BATCH" color:#red;
 	}
-}*/
+}
+
+experiment test repeat: 1 type: batch until: cycle = 100 {
+	parameter nb_extremist var: nb_extremist <- 0 among: [0,1,5,10];
+	parameter save_result_in_csv var: save_result_in_csv <- true;
+	parameter type_explo var: type_explo <- "test";
+	
+	init{
+		string header_csv <- "id_exp,seed,step,polarisation,mean_intention,rate_adoption";
+		save header_csv to: output_directory+"test_results.csv" type:text rewrite: true;
+		write "The file "+output_directory+"test_results.csv is created/reset to store data from this experiment" color:#green;
+	}
+	
+	reflex end_sim {
+		write "END BATCH" color:#red;
+	}
+}
 
 experiment main type: gui {
 //	float minimum_cycle_duration <- 0.1;

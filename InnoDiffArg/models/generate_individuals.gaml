@@ -100,7 +100,7 @@ global{
 		create Individual number: nb_extremist{
 			
 			argumentation_graph <- graph([]);
-			list<argument> args <- rnd(1,nb_max_known_arguments) among pros_arg;
+			list<argument> args <- rnd(1,nb_max_known_arguments) among (flip(0.5)?pros_arg:cons_arg);
 			loop a over: args {
 				known_arguments << a;
 				do add_argument(a,global_argumentation_graph);
