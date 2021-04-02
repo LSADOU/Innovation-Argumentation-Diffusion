@@ -199,7 +199,7 @@ experiment test_stochasticity repeat: 500 type: batch until: cycle = 3000 {
 	init{
 		string header_csv <- "id_exp,seed,step,polarisation,mean_intention,rate_adoption";	
 		save header_csv to: output_directory+"stochasticity_results.csv" type:text rewrite: true;
-		write "The file "+output_directory+"test_results.csv is created/reset to store data from this experiment" color:#green;
+		write "The file "+output_directory+"stochasticity_results.csv is created/reset to store data from this experiment" color:#green;
 	}
 	
 	reflex end_sim {
