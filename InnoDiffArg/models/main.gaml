@@ -98,9 +98,7 @@ global {
 			match "strong_arg"{results <- ""+ int(self)+","+seed+","+nb_strong_arg_added+","+ cycle + ","+	pol+"," +mean_intention+","+rate_adoption; }
 			match "fake_news"{results <- ""+ int(self)+","+seed+","+nb_fake_news+","+ cycle + ","+	pol+"," +mean_intention+","+rate_adoption; }
 			match "extremist"{results <- ""+ int(self)+","+seed+","+nb_extremist+","+ cycle + ","+	pol+"," +mean_intention+","+rate_adoption; }
-			match "stochasticity"{results <- ""+ int(self)+","+seed+","+ cycle+","+pol+","+mean_intention+","+rate_adoption; }
-			match "test"{results <- ""+ int(self)+","+seed+","+ cycle+","+pol+","+mean_intention+","+rate_adoption; }
-		}
+			match "stochasticity"{results <- ""+ int(self)+","+seed+","+ cycle+","+pol+","+mean_intention+","+rate_adoption; }}
 		save results to: output_directory+type_explo+"_results.csv" type:text rewrite: false;
 	}
 	
@@ -201,22 +199,6 @@ experiment test_stochasticity repeat: 500 type: batch until: cycle = 3000 {
 	init{
 		string header_csv <- "id_exp,seed,step,polarisation,mean_intention,rate_adoption";	
 		save header_csv to: output_directory+"stochasticity_results.csv" type:text rewrite: true;
-		write "The file "+output_directory+"test_results.csv is created/reset to store data from this experiment" color:#green;
-	}
-	
-	reflex end_sim {
-		write "END BATCH" color:#red;
-	}
-}
-
-experiment test repeat: 1 type: batch until: cycle = 100 {
-	parameter nb_extremist var: nb_extremist <- 0 among: [0,1,5,10];
-	parameter save_result_in_csv var: save_result_in_csv <- true;
-	parameter type_explo var: type_explo <- "test";
-	
-	init{
-		string header_csv <- "id_exp,seed,step,polarisation,mean_intention,rate_adoption";
-		save header_csv to: output_directory+"test_results.csv" type:text rewrite: true;
 		write "The file "+output_directory+"test_results.csv is created/reset to store data from this experiment" color:#green;
 	}
 	
