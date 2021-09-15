@@ -48,15 +48,6 @@ global{
 		
 		do readTPBdata;
 		
-		// this part computes agents locations to form a lattice ring
-		float inter <- 2 * #pi / population_size;
-		list<point> indiv_locations <- [];
-		float x <- 0.0;
-		loop times: population_size {
-			indiv_locations << point(cos_rad(x)*80,sin_rad(x)*80);
-			x <- x +  inter;
-		}
-		
 		int cpt <- 0;
 		
 		create Individual number: population_size{
@@ -65,7 +56,7 @@ global{
 			list<argument> args <- rnd(1,nb_max_known_arguments) among A;
 			loop a over: args {
 				known_arguments << a;
-				 do add_argument(a,global_argumentation_graph);
+				do add_argument(a,global_argumentation_graph);
 			}
 			loop criterion over: arguments_criteria{
 				crit_importance[criterion] <- rnd(0.0, 1.0);
@@ -73,11 +64,11 @@ global{
 			loop source over: source_types{
 				source_type_confidence[source] <- rnd(1.0);
 			}
+			best_ext <- get_best_extension().key;
+			
 		 	int cluster <- rnd(1,nb_clusters);
 			
-			attitude <- myself.getAttitude(cluster);
 			attitude_weight <- weight_attitude_nonadopters;
-			attitude_uncertainty <- myself.getAttitudeUncertainty(cluster)/2;
 	
 			subjective_norm <- myself.getSubjectiveNorm(cluster);
 			subjective_norm_weight <- weight_subnorm_nonadopters;
@@ -92,7 +83,41 @@ global{
 			do updateInterest;
 			do updateDecisionState;
 			
-			location <- indiv_locations[cpt];
+			id <- cpt;
+			cpt <- cpt+1;
+		}
+		
+		create Individual number: nb_extremist{
+			
+			argumentation_graph <- graph([]);
+			list<argument> args <- rnd(1,nb_max_known_arguments) among (flip(0.5)?pros_arg:cons_arg);
+			loop a over: args {
+				known_arguments << a;
+				do add_argument(a,global_argumentation_graph);
+			}
+			loop criterion over: arguments_criteria{
+				crit_importance[criterion] <- 1.0;
+			}
+			loop source over: source_types{
+				source_type_confidence[source] <- 1.0;
+			}
+			best_ext <- get_best_extension().key;
+			
+			attitude_weight <- 1.0;
+	
+			subjective_norm <- 1.0;
+			subjective_norm_weight <- 0.0;
+			subjective_norm_uncertainty <- 0.0;
+	
+			perceived_behavioural_control <- 0.0;
+			perceived_behavioural_control_weight <- 0.0;
+			
+			do updateInformed;
+			do updateAttitude;
+			do updateIntentionValues;
+			do updateInterest;
+			do updateDecisionState;
+			
 			id <- cpt;
 			cpt <- cpt+1;
 		}
@@ -114,5 +139,4 @@ global{
 		return gauss(TPBmap[cluster]["PBC"].key,TPBmap[cluster]["PBC"].value);
 	}
 
-	
 }
