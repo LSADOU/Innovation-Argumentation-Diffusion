@@ -69,7 +69,6 @@ global {
 		loop attack over: rows_list(attack_data){
 			argument arg1 <- argument_by_id[attack[0]];
 			argument arg2 <- argument_by_id[attack[1]];
-			
 			attacks[arg1] << arg2;
 			attacked_by[arg2] << arg1;
 			add edge(arg1::arg2) to: global_argumentation_graph;
@@ -163,10 +162,15 @@ global {
 		attacks[a]<- [];
 		attacked_by[a]<-[];
 		cons_arg << a;
-		argument a2 <- last(pros_arg sort_by (length(attacks[each])));
+		list<argument> ordered_pro_list <- reverse(pros_arg sort_by (length(attacks[each])));
+		argument a2 <- ordered_pro_list [0];
+		argument a3 <- ordered_pro_list [1];
+		write "A cons argument has been added against the strong argument "+ a2;
 		write "A cons argument has been added against the strong argument "+ a2;
 		attacked_by[a]<< a2;
 		add edge(a::a2) to: global_argumentation_graph;
+		attacked_by[a]<< a3;
+		add edge(a::a3) to: global_argumentation_graph;
 		return a;
 	}
 	

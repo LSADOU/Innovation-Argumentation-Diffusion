@@ -60,7 +60,7 @@ species Individual skills: [argumenting]{
 	// action based on MS dialogue
 	action initiateDebate (Individual opponent){
 		//the initiator choose a debate central argument in one of its complete extensions, here we use the best extension
-		debate_arg <- one_of(get_best_extension().key);
+		debate_arg <- one_of(best_ext);
 		ask opponent{
 			do reactInitiateDebate(myself,myself.debate_arg);
 		}
@@ -208,6 +208,7 @@ species Individual skills: [argumenting]{
 		// if no arg was found before we look for other arguments presents in the known arguments that is not already used in the debate
 		if(attacking_arg = nil){
 			loop argu over: known_arguments{
+
 				if (attacked_by[argt] contains argu) and not contains(getDoutFor(argu),argt){
 					attacking_arg <- argu;
 					break;

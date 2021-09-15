@@ -255,10 +255,14 @@ experiment diffusion_strg_arg type: gui {
 	list<string> possible_states <- ["information request", "not concerned", "no adoption", "pre adoption", "adoption", "satisfied", "unsatisfied"];
 	
 	output {
-		display VisualNetwork type: opengl draw_env:false{
+		layout #split toolbars: false consoles: false navigator:false parameters: false;
+		
+		display VisualStrongArgDiffusion type: opengl draw_env:false{
 	    	species Individual aspect: diffusion;
 		}
-		
+		display VisualIntention type: opengl draw_env:false{
+	    	species Individual aspect: basic;
+		}
 	}
 	
 }
