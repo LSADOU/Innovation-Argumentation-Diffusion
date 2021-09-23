@@ -24,7 +24,7 @@ global {
 	string TPB_csv_namefile <- "values_TPB.csv";
 	int scale <- 10;
 	
-	int population_size <- 200;
+	int population_size <- 100;
 	float social_impact_param <- 0.1;
 	int nb_neighbors <- 4;
 	int nb_relevents_args <- 4;
@@ -58,7 +58,8 @@ global {
 	string type_explo;
 	int nb_fake_news <- 0;
 	int nb_strong_arg_added <- 0;
-	int adding_cycle <- 100;
+	list<int> adding_cycles <- [100];
+	string network_topology <- "smallworld";
 	float add_PBC <- 0.5;
 	int nb_extremist <- 0;
 	int nb_attacks_fake_news <- 1;
@@ -88,15 +89,39 @@ global {
 			}
 		}
 		do generatePopulation;
+		switch network_topology{
+			match "smallworld"{
+				do generateSmallWorldSocialNetwork(Individual.population,nb_neighbors,0.2);
+			}
+			match "scalefree"{
+				do generateScaleFreeSocialNetwork(Individual.population,nb_neighbors,5);
+			}
+			match "random"{
+				do generateRandomSocialNetwork(Individual.population,2);
+			}
+			match "regular"{
+				do generateRegularSocialNetwork(Individual.population,"Moore");
+			}
+			match "complete"{
+				
+			}
+		}
+		//do generateScaleFreeSocialNetwork(Individual.population,nb_neighbors,5);
 		do generateSmallWorldSocialNetwork(Individual.population,nb_neighbors,0.2);
 		//do generateRegularSocialNetwork(Individual.population,"Moore");
 	}
 	
-	reflex insert_strong_arg when: type_explo = "strong_arg_insertion" and cycle = adding_cycle {
+	reflex insert_strong_arg when: type_explo = "strong_arg_insertion" and adding_cycles contains cycle {
 		loop times: nb_strong_arg_added{
 			argument a <- addStrongConsArgument();
-			ask Individual[0]{
+			ask one_of(Individual){
 				do addArg(a);
+				best_ext <- get_best_extension().key;
+				do updateInformed;
+				do updateAttitude;
+				do updateIntentionValues;
+				do updateInterest;
+				do updateDecisionState;
 			}
 		}
 	}
@@ -119,6 +144,11 @@ global {
 			match "acceptability"{
 				float mean_intention_acceptabilty <- Individual mean_of (each.intention_acceptability);
 				results <- ""+ int(self)+","+seed+","+ cycle+","+pol+","+mean_intention+","+mean_intention_acceptabilty+","+rate_adoption;
+			}
+			match "strong_arg_insertion"{
+				int population_with_added_arg <- length(collect(Individual,length(each.known_arguments inter strong_arg_added)>1));
+				int population_with_attacked_arg <- length(collect(Individual,length(each.known_arguments inter attacked_by_added_strong_arg)>1));
+				results <- ""+ int(self)+","+seed+","+ cycle+","+population_size+","+population_with_added_arg+","+population_with_attacked_arg+","+pol+","+mean_intention+","+rate_adoption; 
 			}
 		}
 		save results to: output_directory+type_explo+"_results.csv" type:text rewrite: false;
@@ -244,16 +274,26 @@ experiment test_acceptability repeat: 100 type: batch until: cycle = 3000 {
 	}
 }
 
+experiment test_diffusion_strg_arg type: gui {
+	
+	parameter type_explo var: type_explo <- "strong_arg_insertion";
+	parameter network_topology var: network_topology <- "smallworld" among:["smallworld","scalefree","random","complete","regular"];
+	parameter nb_strg_arg_added var: nb_strong_arg_added <- 1;
+	parameter adding_cycle var: adding_cycles <- [20];
+	
+	init{
+		string header_csv <- "id_exp,seed,step,population_size,population_with_added_arg,population_with_attacked_argpolarisation,mean_intention,rate_adoption";	
+		save header_csv to: output_directory+"strong_arg_insertion_results.csv" type:text rewrite: true;
+		write "The file "+output_directory+"strong_arg_insertion_results.csv is created/reset to store data from this experiment" color:#green;
+	}
+}
+
 experiment diffusion_strg_arg type: gui {
 	
 	parameter type_explo var: type_explo <- "strong_arg_insertion";
 	parameter nb_strg_arg_added var: nb_strong_arg_added <- 1;
-	parameter adding_cycle var: adding_cycle <- 50;
+	parameter adding_cycle var: adding_cycles <- [20];
 
-	map<string,int>argument_distribution <- [];
-	map<string,int>decision_state_distribution <- [];
-	list<string> possible_states <- ["information request", "not concerned", "no adoption", "pre adoption", "adoption", "satisfied", "unsatisfied"];
-	
 	output {
 		layout #split toolbars: false consoles: false navigator:false parameters: false;
 		
@@ -262,6 +302,10 @@ experiment diffusion_strg_arg type: gui {
 		}
 		display VisualIntention type: opengl draw_env:false{
 	    	species Individual aspect: basic;
+		}
+		display BoundariesIntention type: opengl draw_env:false{
+			species Boundaries aspect: intention_overview;
+	    	species Individual aspect: intention_overview_with_added_arg;
 		}
 	}
 	

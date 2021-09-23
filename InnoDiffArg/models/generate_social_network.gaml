@@ -157,6 +157,7 @@ global{
 		float r;
 		float acc;
 		loop indiv over: individuals_to_connect - links.keys{
+			links[indiv] <- [];
 			loop times: K{
 				linking_probability<-[];
 				sum <- 0.0;
@@ -176,6 +177,13 @@ global{
 					}
 				}
 			}
+		}
+		// attributing relatives and location on the ring
+		int cpt <- 0;
+		ask Individual{
+			relatives <- links[self];
+			location <- indiv_locations[cpt];
+			cpt <- cpt+1;
 		}
 		
 	}

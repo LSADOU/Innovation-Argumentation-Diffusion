@@ -24,7 +24,8 @@ species Individual skills: [argumenting]{
 	list<argument> known_arguments;
 	
 	//*********Debate variables**********
-	// attacks sent list [attack::attacked,...]
+	// a map storing attacks already done during dialogue
+	// D_out <- [attacked_arg :: [list_of_attacking_arg]]
 	map<argument,list<argument>> D_out <- [];
 	list<argument> best_ext <- [];
 	argument debate_arg;
@@ -60,7 +61,10 @@ species Individual skills: [argumenting]{
 	// action based on MS dialogue
 	action initiateDebate (Individual opponent){
 		//the initiator choose a debate central argument in one of its complete extensions, here we use the best extension
-		debate_arg <- one_of(best_ext);
+		debate_arg <- last(known_arguments);
+		if strong_arg_added contains debate_arg{
+			write "added strong arg engaged";
+		}
 		ask opponent{
 			do reactInitiateDebate(myself,myself.debate_arg);
 		}
@@ -195,44 +199,33 @@ species Individual skills: [argumenting]{
 		}
 	}
 	
-	//return an argument attacking argt argument 
+	//return an argument attacking the argt argument 
 	argument computeAttackingArg(argument argt){
-		argument attacking_arg;
-		// first we look for an attacking arg in the best extension that is not already used in the debate
-		loop argu over: best_ext{
-			if (attacked_by[argt] contains argu) and not contains(getDoutFor(argu),argt){
-				attacking_arg <- argu;
-				break;
-			}
+		// at first, looking for an attacking argument in the prefered extension
+		list<argument> possible_attacking_args <- attacks[argt] inter best_ext;
+		if D_out[argt] != nil {
+			possible_attacking_args <- possible_attacking_args - D_out[argt];
 		}
-		// if no arg was found before we look for other arguments presents in the known arguments that is not already used in the debate
-		if(attacking_arg = nil){
-			loop argu over: known_arguments{
-
-				if (attacked_by[argt] contains argu) and not contains(getDoutFor(argu),argt){
-					attacking_arg <- argu;
-					break;
-				}
-			}
+		if length(possible_attacking_args) > 0{
+			argument attacking_arg <- one_of(possible_attacking_args);
+			return attacking_arg;
 		}
+		// then, looking for an attacking argument in the known_arguments
+		possible_attacking_args <- attacks[argt] inter known_arguments;
+		if D_out[argt] != nil {
+			possible_attacking_args <- possible_attacking_args - D_out[argt];
+		}
+		argument attacking_arg <- one_of(possible_attacking_args);
 		return attacking_arg;
 	}
 	
 	action addAttackToDout(argument attacking, argument attacked){
-		if D_out.keys contains attacking{
-			if not contains(D_out[attacking], attacked){
-				D_out[attacking] << attacked;
+		if D_out.keys contains attacked{
+			if not contains(D_out[attacked], attacking){
+				D_out[attacked] << attacking;
 			}
 		}else{
-			D_out[attacking] <- [attacked];
-		}
-	}
-	
-	list<argument> getDoutFor(argument attacking){
-		if D_out.keys contains attacking{
-			return D_out[attacking];
-		}else{
-			return [];
+			D_out[attacked] <- [attacking];
 		}
 	}
 	
@@ -245,10 +238,13 @@ species Individual skills: [argumenting]{
 	action addArg(argument argt){
 		known_arguments << argt;
 		do add_argument(argt, global_argumentation_graph);
+		best_ext <- get_best_extension().key;
 		if (length(known_arguments) > nb_max_known_arguments) {
-			argument r_arg <- first(known_arguments);
-			do remove_argument(r_arg);
-			known_arguments >>r_arg;
+			if(length(best_ext) = length(known_arguments)){
+				do removeArg(first(known_arguments - best_ext - [argt]));
+			}else{
+				do removeArg(first(known_arguments - best_ext - [argt]));
+			}
 		}
 	}
 	
@@ -327,13 +323,21 @@ species Individual skills: [argumenting]{
 	}
 	
 	aspect diffusion{
-		rgb c <- #white;
-		loop argu over: known_arguments{
-			if argu.id = "strong_arg" {
-				c <- #red;
-			} 
+		
+		if length(known_arguments inter strong_arg_added) > 0{
+			if length(known_arguments inter attacked_by_added_strong_arg) > 0{
+				draw arc(4,180,180) color: #red;
+				draw arc(4,0,180) color: #green;
+			}else{
+				draw circle(2) color: #red border: #black;
+			}
+		}else{
+			if length(known_arguments inter attacked_by_added_strong_arg) > 0{
+				draw circle(2) color: #green border: #black;
+			}else{
+				draw circle(2) color: #white border: #black;
+			}
 		}
-		draw circle(2) color: c border: #black;
 		if (last_connexion != nil){
 			draw line([location,last_connexion.location]) end_arrow: 1 color: #black;
 		}
@@ -346,6 +350,28 @@ species Individual skills: [argumenting]{
 		draw circle(0.1*scale) at:center color: #black;
 		draw line([center,right]) color: #black;
 		draw line([center,left]) color: #black;
+	}
+	
+	aspect intention_overview_with_added_arg{
+		point center <- {intention*scale,id*2,0.0};
+		point right <- {(intention+intention_uncertainty)*scale,id*2,0.0};
+		point left <- {(intention-intention_uncertainty)*scale,id*2,0.0};
+		draw line([center,right]) color: #black;
+		draw line([center,left]) color: #black;
+		if length(known_arguments inter strong_arg_added) > 0{
+			if length(known_arguments inter attacked_by_added_strong_arg) > 0{
+				draw arc(0.1,180,180) at:center color: #red;
+				draw arc(0.1,0,180) at:center color: #green;
+			}else{
+				draw circle(0.1*scale) at:center color: #red border: #black;
+			}
+		}else{
+			if length(known_arguments inter attacked_by_added_strong_arg) > 0{
+				draw circle(0.1*scale) at:center color: #green border: #black;
+			}else{
+				draw circle(0.1*scale) at:center color: #white border: #black;
+			}
+		}
 	}
 	
 }

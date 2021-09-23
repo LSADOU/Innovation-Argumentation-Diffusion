@@ -16,6 +16,8 @@ global {
 	matrix attack_data <- matrix (attack_csv);
 	list<argument> pros_arg <- [];
 	list<argument> cons_arg <- [];
+	list<argument> strong_arg_added <- [];
+	list<argument> attacked_by_added_strong_arg <- [];
 	map<string, argument> argument_by_id <- [];
 	map<argument,list<argument>> attacks <- [];
 	map<argument,list<argument>> attacked_by <- [];
@@ -162,15 +164,16 @@ global {
 		attacks[a]<- [];
 		attacked_by[a]<-[];
 		cons_arg << a;
-		list<argument> ordered_pro_list <- reverse(pros_arg sort_by (length(attacks[each])));
-		argument a2 <- ordered_pro_list [0];
-		argument a3 <- ordered_pro_list [1];
+		//list<argument> ordered_pro_list <- reverse(pros_arg sort_by (length(attacks[each])));
+		list<argument> ordered_pro_list <- remove_duplicates(accumulate(Individual,each.known_arguments)) sort_by length(attacks[each]);
+		argument a2 <- first_with(ordered_pro_list,each.conclusion ="+");
 		write "A cons argument has been added against the strong argument "+ a2;
-		write "A cons argument has been added against the strong argument "+ a2;
+		strong_arg_added << a;
+		attacked_by_added_strong_arg << a2; 
 		attacked_by[a]<< a2;
+		attacks[a2]<<a;
 		add edge(a::a2) to: global_argumentation_graph;
-		attacked_by[a]<< a3;
-		add edge(a::a3) to: global_argumentation_graph;
+		write attacked_by_added_strong_arg;
 		return a;
 	}
 	
