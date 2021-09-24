@@ -148,7 +148,7 @@ global {
 			match "strong_arg_insertion"{
 				int population_with_added_arg <- length(collect(Individual,length(each.known_arguments inter strong_arg_added)>1));
 				int population_with_attacked_arg <- length(collect(Individual,length(each.known_arguments inter attacked_by_added_strong_arg)>1));
-				results <- ""+ int(self)+","+seed+","+ cycle+","+population_size+","+population_with_added_arg+","+population_with_attacked_arg+","+pol+","+mean_intention+","+rate_adoption; 
+				results <- ""+ int(self)+","+seed+","+ cycle+","+network_topology+","+population_size+","+population_with_added_arg+","+population_with_attacked_arg+","+pol+","+mean_intention+","+rate_adoption; 
 			}
 		}
 		save results to: output_directory+type_explo+"_results.csv" type:text rewrite: false;
@@ -282,7 +282,7 @@ experiment test_diffusion_strg_arg type: gui {
 	parameter adding_cycle var: adding_cycles <- [20];
 	
 	init{
-		string header_csv <- "id_exp,seed,step,population_size,population_with_added_arg,population_with_attacked_argpolarisation,mean_intention,rate_adoption";	
+		string header_csv <- "id_exp,seed,step,network_topology,population_size,population_with_added_arg,population_with_attacked_argpolarisation,mean_intention,rate_adoption";	
 		save header_csv to: output_directory+"strong_arg_insertion_results.csv" type:text rewrite: true;
 		write "The file "+output_directory+"strong_arg_insertion_results.csv is created/reset to store data from this experiment" color:#green;
 	}
