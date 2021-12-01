@@ -128,7 +128,7 @@ global {
 		write "there are " + nb_arg + " arguments, with "+length(pros_arg)+ " pros and "+length(cons_arg)+" cons arguments";
 		
 		int nb_attack <- 0;
-		
+	
 		loop arg1 over: A{
 			loop times: max([gauss(mean_nb_attack, mean_nb_attack/2),0]){
 				argument arg2 <- arg1.conclusion = "+" ? one_of(cons_arg where (not contains(attacks[arg1],each))): one_of(pros_arg where (not contains(attacks[arg1],each)));
@@ -138,7 +138,6 @@ global {
 				nb_attack <- nb_attack + 1;
 			}
 		}
-
 		write ""+nb_attack+" attack(s) computed";
 		do nb_conflict_attacks;
 		
@@ -167,13 +166,13 @@ global {
 		//list<argument> ordered_pro_list <- reverse(pros_arg sort_by (length(attacks[each])));
 		list<argument> ordered_pro_list <- remove_duplicates(accumulate(Individual,each.known_arguments)) sort_by length(attacks[each]);
 		argument a2 <- first_with(ordered_pro_list,each.conclusion ="+");
-		write "A cons argument has been added against the strong argument "+ a2;
 		strong_arg_added << a;
 		attacked_by_added_strong_arg << a2; 
+		//write strong_arg_added;
+		//write attacked_by_added_strong_arg;
 		attacked_by[a]<< a2;
 		attacks[a2]<<a;
 		add edge(a::a2) to: global_argumentation_graph;
-		write attacked_by_added_strong_arg;
 		return a;
 	}
 	
@@ -183,7 +182,6 @@ global {
 		attacked_by[a]<-[];
 		pros_arg << a;
 		argument a2 <- last(cons_arg sort_by (length(attacks[each])));
-		write "A pro argument has been added against the strong argument "+ a2;
 		attacked_by[a]<< a2;
 		add edge(a::a2) to: global_argumentation_graph;
 	}

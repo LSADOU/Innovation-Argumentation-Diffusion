@@ -20,7 +20,7 @@ species Individual skills: [argumenting]{
 	Individual last_connexion;
 	bool satisfied;
 	int cpt_satisfied <- 0;
-	
+	bool interact <- false;
 	list<argument> known_arguments;
 	
 	//*********Debate variables**********
@@ -53,18 +53,22 @@ species Individual skills: [argumenting]{
 	//*******************************
 	
 	reflex interactWithRelative{
-		last_connexion <- one_of(relatives);
-		do initiateDebate(last_connexion);
-		//ask last_connexion { do influenced_by(myself); }
+		if interact{
+			if length(relatives) = 0{
+				write "KO";
+			}
+			last_connexion <- one_of(relatives);
+			do initiateDebate(last_connexion);
+			interact <- false;
+		}else{
+			last_connexion <- nil;
+		}
 	}
 	
 	// action based on MS dialogue
 	action initiateDebate (Individual opponent){
 		//the initiator choose a debate central argument in one of its complete extensions, here we use the best extension
 		debate_arg <- last(known_arguments);
-		if strong_arg_added contains debate_arg{
-			write "added strong arg engaged";
-		}
 		ask opponent{
 			do reactInitiateDebate(myself,myself.debate_arg);
 		}
@@ -339,7 +343,7 @@ species Individual skills: [argumenting]{
 			}
 		}
 		if (last_connexion != nil){
-			draw line([location,last_connexion.location]) end_arrow: 1 color: #black;
+			draw line([location,last_connexion.location]) end_arrow: 2 color: #black;
 		}
 	}
 	

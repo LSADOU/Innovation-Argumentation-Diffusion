@@ -12,6 +12,8 @@ import "Individual.gaml"
 
 global{
 	
+	map<Individual,int> k_i;
+	
 	action generateSmallWorldSocialNetwork(list<Individual> individuals_to_connect, int K, float beta){
 		map<Individual,list<Individual>> links;
 		int pop_size <- length(individuals_to_connect);
@@ -123,12 +125,23 @@ global{
 			indiv_locations << point(cos_rad(x)*80,sin_rad(x)*80);
 			x <- x +  inter;
 		}
+		// attributing relatives and location on the ring and relatives
+		int cpt <- 0;
+		ask Individual{
+			relatives <-Individual - self;
+			location <- indiv_locations[cpt];
+			cpt <- cpt+1;
+		}
 	}
 	
-	action generateScaleFreeSocialNetwork(list<Individual> individuals_to_connect, int K, int m0){
-		map<Individual,int> degree;
+	action generateScaleFreeSocialNetwork(list<Individual> individuals_to_connect, int m0){
+		
+		list<Individual> init_indiv;
 		map<Individual,list<Individual>> links;
-		int nb_link <- 0;
+		map<Individual,float> p_i <- [];
+		int sum_k_j <- 0;
+		m0 <- max([m0,2]);
+		
 		// this part computes agents locations to form a lattice ring
 		int pop_size <- length(individuals_to_connect);
 		float inter <- 2 * #pi / pop_size;
@@ -139,49 +152,43 @@ global{
 			x <- x +  inter;
 		}
 		
-		loop times: m0{
-			Individual i <- one_of(individuals_to_connect - links.keys);
-			links[i] <- [];
-			degree[i] <- 0;
+		init_indiv <- m0 among Individual;
+		loop i over: init_indiv{
+			links[i] <-[];
+			k_i[i]<- 0;
+			
+		}
+		loop i over: init_indiv{
+				links[i] <- links.keys-i;
+				k_i[i]<- length(links[i]);
+				sum_k_j <- k_i[i];
+		}
+		loop i over: init_indiv{
+			p_i[i] <- max([1,k_i[i]])/max([1,sum_k_j]);
 		}
 		
-		loop indiv over: links.keys{
-			loop times: K{
-				links[indiv] << one_of(links.keys - [indiv,links[indiv]]);
-				degree[indiv] <- degree[indiv] +1;
+		loop i over: shuffle(Individual-init_indiv){
+			links[i] <- [];
+			k_i[i]<- 0;
+			loop times:m0{
+				Individual i2 <- rnd_choice(p_i);
+				loop while: links[i] contains i2 {
+					i2 <- rnd_choice(p_i);
+				} 
+				links[i] << i2;
+				k_i[i]<- k_i[i] +1;
+				k_i[i2]<- k_i[i2] +1;
+				sum_k_j <- sum_k_j +2;
 			}
-			nb_link <- nb_link +K;
-		}
-		map<Individual,float>linking_probability;
-		float sum;
-		float r;
-		float acc;
-		loop indiv over: individuals_to_connect - links.keys{
-			links[indiv] <- [];
-			loop times: K{
-				linking_probability<-[];
-				sum <- 0.0;
-				//we compute probability to link each individual already in the network
-				loop target over: links.keys - links[indiv]{
-					linking_probability[target] <- degree[target] / nb_link;
-					sum <- linking_probability[target];
-				}
-				// we pick an individual
-				r <- rnd(sum);
-				acc <- 0.0;
-				loop target over: linking_probability.keys{
-					acc <- acc + linking_probability[target];
-					if r < acc{
-						links[indiv] << target;
-						break;
-					}
-				}
+			loop linked_indiv over: links.keys{
+				p_i[linked_indiv]<- k_i[linked_indiv]/sum_k_j;
 			}
 		}
 		// attributing relatives and location on the ring
 		int cpt <- 0;
 		ask Individual{
 			relatives <- links[self];
+			write relatives;
 			location <- indiv_locations[cpt];
 			cpt <- cpt+1;
 		}

@@ -13,7 +13,6 @@ import "generate_social_network.gaml"
 
 global {
 
-
 	string csv_directory <- "../includes/";
 	string output_directory <- "../output/";
 	bool arg_csv_has_header <- true;
@@ -58,16 +57,19 @@ global {
 	string type_explo;
 	int nb_fake_news <- 0;
 	int nb_strong_arg_added <- 0;
-	list<int> adding_cycles <- [100];
-	string network_topology <- "smallworld";
+	int adding_cycle <- 50;
+	string network_topology <- "scalefree" among:["smallworld","scalefree","regular","random"];
+	string interaction_mode <- "hub_first" among:["hub_first","one by one","full"];
+	map<Individual,float> interaction_distrib;
 	float add_PBC <- 0.5;
 	int nb_extremist <- 0;
 	int nb_attacks_fake_news <- 1;
-	bool read_arg_instead_of_gen <- true;
+	bool read_arg_instead_of_gen <- false;
 	float mean_intention;
 	float rate_adoption;
 	float pol ;
 	bool save_result_in_csv <- false;
+	
 	
 	list<argument> A -> {global_argumentation_graph.vertices};
 	
@@ -94,7 +96,7 @@ global {
 				do generateSmallWorldSocialNetwork(Individual.population,nb_neighbors,0.2);
 			}
 			match "scalefree"{
-				do generateScaleFreeSocialNetwork(Individual.population,nb_neighbors,5);
+				do generateScaleFreeSocialNetwork(Individual.population,1);
 			}
 			match "random"{
 				do generateRandomSocialNetwork(Individual.population,2);
@@ -102,18 +104,41 @@ global {
 			match "regular"{
 				do generateRegularSocialNetwork(Individual.population,"Moore");
 			}
-			match "complete"{
-				
-			}
 		}
-		//do generateScaleFreeSocialNetwork(Individual.population,nb_neighbors,5);
-		do generateSmallWorldSocialNetwork(Individual.population,nb_neighbors,0.2);
-		//do generateRegularSocialNetwork(Individual.population,"Moore");
+		if type_explo = "strong_arg_insertion"{
+			do addStrongConsArgument();
+		}
 	}
 	
-	reflex insert_strong_arg when: type_explo = "strong_arg_insertion" and adding_cycles contains cycle {
-		loop times: nb_strong_arg_added{
-			argument a <- addStrongConsArgument();
+	reflex choose_interaction{
+		switch interaction_mode{
+			match "hub_first"{
+				//computing probability to put interact = true to each individual according their number of relatives
+				if length(interaction_distrib)=0{
+					int nb_relations <- sum(Individual collect length(each.relatives));
+					loop indiv over: Individual{
+						interaction_distrib[indiv] <- length(indiv.relatives) / nb_relations;
+					}
+				}else{
+					ask rnd_choice(interaction_distrib){
+						interact <- true;
+					}
+				}
+			}
+			match "one by one"{
+				ask one_of(Individual){
+					interact <- true;
+				}
+			}
+			match "full"{
+				ask Individual{
+					interact <- true;
+				}
+			}
+		}
+	}
+	reflex insert_strong_arg when: type_explo = "strong_arg_insertion" and adding_cycle = cycle {
+		loop a over: strong_arg_added{
 			ask one_of(Individual){
 				do addArg(a);
 				best_ext <- get_best_extension().key;
@@ -130,8 +155,18 @@ global {
 		depth_all_dial <-[0::0,1::0,2::0,3::0];
 	}
 	
+	pair<int,int> getStrArgAttackedArg{
+		int population_with_added_arg <- 0;
+		int population_with_attacked_arg <- 0;
+		loop indiv over: Individual{
+			population_with_added_arg <- population_with_added_arg + length(indiv.known_arguments inter strong_arg_added);
+			population_with_attacked_arg <- population_with_attacked_arg + length(indiv.known_arguments inter attacked_by_added_strong_arg);
+		}
+		return population_with_added_arg::population_with_attacked_arg;
+	}
+	
+	
 	reflex save_result when: every(50 #cycle) and save_result_in_csv{
-		
 		pol <- polarization();
 		mean_intention <- Individual mean_of (each.intention);
 		rate_adoption <- (Individual count (each.decision_state="adoption" or each.decision_state="satisfied" or each.decision_state="unsatisfied"))/length(Individual.population);
@@ -143,12 +178,12 @@ global {
 			match "stochasticity"{results <- ""+ int(self)+","+seed+","+ cycle+","+pol+","+mean_intention+","+rate_adoption; }
 			match "acceptability"{
 				float mean_intention_acceptabilty <- Individual mean_of (each.intention_acceptability);
-				results <- ""+ int(self)+","+seed+","+ cycle+","+pol+","+mean_intention+","+mean_intention_acceptabilty+","+rate_adoption;
+				results <- ""+ int(self)+","+seed+","+cycle+","+pol+","+mean_intention+","+mean_intention_acceptabilty+","+rate_adoption;
 			}
 			match "strong_arg_insertion"{
-				int population_with_added_arg <- length(collect(Individual,length(each.known_arguments inter strong_arg_added)>1));
-				int population_with_attacked_arg <- length(collect(Individual,length(each.known_arguments inter attacked_by_added_strong_arg)>1));
-				results <- ""+ int(self)+","+seed+","+ cycle+","+network_topology+","+population_size+","+population_with_added_arg+","+population_with_attacked_arg+","+pol+","+mean_intention+","+rate_adoption; 
+				write "simulation "+self+" save cycle "+cycle+" - "+network_topology+"/"+nb_strong_arg_added+"/"+adding_cycle;
+				pair<int,int> x <- getStrArgAttackedArg();
+				results <- ""+ int(self)+","+seed+","+ cycle+","+network_topology+","+population_size+","+nb_strong_arg_added+","+adding_cycle+","+x.key+","+x.value+","+pol+","+mean_intention+","+rate_adoption; 
 			}
 		}
 		save results to: output_directory+type_explo+"_results.csv" type:text rewrite: false;
@@ -260,6 +295,7 @@ experiment test_stochasticity repeat: 500 type: batch until: cycle = 3000 {
 }
 
 experiment test_acceptability repeat: 100 type: batch until: cycle = 3000 {
+
 	parameter save_result_in_csv var: save_result_in_csv <- true;
 	parameter type_explo var: type_explo <- "acceptability";
 	
@@ -274,28 +310,39 @@ experiment test_acceptability repeat: 100 type: batch until: cycle = 3000 {
 	}
 }
 
-experiment test_diffusion_strg_arg type: gui {
+experiment test_diffusion_strg_arg type: batch repeat: 50 until: cycle = 1000{
 	
-	parameter type_explo var: type_explo <- "strong_arg_insertion";
-	parameter network_topology var: network_topology <- "smallworld" among:["smallworld","scalefree","random","complete","regular"];
-	parameter nb_strg_arg_added var: nb_strong_arg_added <- 1;
-	parameter adding_cycle var: adding_cycles <- [20];
+	parameter network_topology var: network_topology <- "regular" among:["regular","scalefree","smallworld","random"];
+	parameter nb_strg_arg_added var: nb_strong_arg_added <- 1 among:[1,0];
+	parameter adding_cycle var: adding_cycle <- 50 among:[50,500];
 	
 	init{
-		string header_csv <- "id_exp,seed,step,network_topology,population_size,population_with_added_arg,population_with_attacked_argpolarisation,mean_intention,rate_adoption";	
+		/*gama.pref_parallel_simulations<-true;
+		gama.pref_parallel_simulations_all<-true;
+		gama.pref_parallel_threads<-24;*/
+		save_result_in_csv <- true;
+		type_explo <- "strong_arg_insertion";
+		interaction_mode <- "full";
+		string header_csv <- "id_exp,seed,step,network_topology,population_size,nb_strg_arg,adding_cycle,population_with_added_arg,population_with_attacked_arg,polarisation,mean_intention,rate_adoption";	
 		save header_csv to: output_directory+"strong_arg_insertion_results.csv" type:text rewrite: true;
 		write "The file "+output_directory+"strong_arg_insertion_results.csv is created/reset to store data from this experiment" color:#green;
+	}
+	
+	reflex end_sim {
+		write "END BATCH" color:#red;
 	}
 }
 
 experiment diffusion_strg_arg type: gui {
-	
+		
 	parameter type_explo var: type_explo <- "strong_arg_insertion";
 	parameter nb_strg_arg_added var: nb_strong_arg_added <- 1;
-	parameter adding_cycle var: adding_cycles <- [20];
+	parameter adding_cycle var: adding_cycle <- 20;
+	parameter network_topology var: network_topology <- "scalefree";
+	parameter interaction_mode var:interaction_mode <- "hub_first";
 
 	output {
-		layout #split toolbars: false consoles: false navigator:false parameters: false;
+		layout #split toolbars: false consoles: true navigator:false parameters: false;
 		
 		display VisualStrongArgDiffusion type: opengl draw_env:false{
 	    	species Individual aspect: diffusion;
@@ -352,6 +399,20 @@ experiment main type: gui {
 				datalist Individual collect each.name value: Individual collect each.intention color:#black marker: false thickness:2.0;
 			}
 		}
+		
+		display degree_chart {
+			chart "degree_distrib" type: histogram{
+				map<int, int> degree_distrib <- [];
+				loop k over: k_i.keys{
+					if degree_distrib[k_i[k]] = nil{
+						degree_distrib[k_i[k]] <- 1;
+					}else{
+						degree_distrib[k_i[k]] <- degree_distrib[k_i[k]] + 1;
+					}
+				}
+				datalist degree_distrib.keys value: degree_distrib.keys collect degree_distrib[each];
+			}
+		}
 		/*display state_chart {
 			chart "decision states histogram" type: histogram{
 				datalist decision_state_distribution.keys value: decision_state_distribution.keys collect decision_state_distribution[each] color:#blue;
@@ -379,10 +440,10 @@ experiment main type: gui {
 				data "interested people" value: (Individual count (each.interest="yes"))/(length(Individual.population))*100 color:#black marker: false thickness:2.0;
 			}
 		}*/
-		display adoption_chart {
+		/*display adoption_chart {
 			chart "adoption (in % of pop.) according simulation cycles" type: xy series_label_position:none {
 				data "adoption" value: (Individual count (each.decision_state="adoption" or each.decision_state="satisfied" or each.decision_state="unsatisfied"))/length(Individual.population)*100 color:#black marker: false thickness:2.0;
 			}
-		}
+		}*/
 	}
 }
